@@ -107,7 +107,6 @@ OpenNetMeter.Tests/               单元测试
 Installer/                        WiX 安装器工程（未汉化，未随本项目发布）
 scripts/                          构建与发布脚本
 汉化说明.md                        汉化范围、术语、未汉化项
-发布指南.md                        发布到 GitHub 的操作步骤与检查清单
 README.upstream.md                上游原始说明
 ```
 
