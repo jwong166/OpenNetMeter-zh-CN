@@ -8,8 +8,7 @@ Windows 网络流量监控工具 [OpenNetMeter](https://github.com/Ashfaaq18/Ope
 - 许可：Apache License 2.0（`LICENSE` / `NOTICE` 原样保留）
 
 > 本项目为**非官方汉化**，与原作者 Ashfaaq Riphque 无隶属关系。上游程序相关的问题请提交至[官方仓库](https://github.com/Ashfaaq18/OpenNetMeter/issues)。
-
----
+> 翻译和新增功能来自DeepSeek-V4.1-Flash-1017，思考强度极致，含人量基本为0
 
 ## 下载与运行
 
