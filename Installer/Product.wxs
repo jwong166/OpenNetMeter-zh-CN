@@ -1,0 +1,101 @@
+<!-- Import global variables -->
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+	 xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+	<Package Language="1033"
+		 Name="$(ProductName)" Version="$(ProductVersion)" Manufacturer="$(Manufacturer)"
+		 UpgradeCode="c8795db6-2426-4f40-a615-671f26fcaf3a" InstallerVersion="200">
+
+		<MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="!(loc.DowngradeError)" />
+		<Icon Id="AppIcon.ico" SourceFile="$(RepoRoot)Resources\AppIcon.ico"/>
+		<Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+ 
+		<Property Id="DESKTOP_SHORTCUT" Value="1"/>
+
+		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch $(ProductName)" />
+    	<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+		<Property Id="WixShellExecTarget" Value="[InstallFolder]$(ProductName).exe" />
+
+    	<CustomAction Id="LaunchApplication"
+              BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+              DllEntry="WixShellExec"
+              Impersonate="yes" />
+
+		<CustomAction Id="CloseRunningApp"
+              Directory="System64Folder"
+              Execute="deferred"
+              Impersonate="no"
+              Return="ignore"
+              ExeCommand='cmd.exe /c "taskkill /F /IM $(ProductName).exe"' />
+
+		<CustomAction Id="CleanupAppData"
+              Directory="System64Folder"
+              Execute="deferred"
+              Impersonate="yes"
+              Return="ignore"
+              ExeCommand='cmd.exe /c "rmdir /S /Q "%LOCALAPPDATA%\$(ProductName)""' />
+
+		<CustomAction Id="DeleteOpenNetMeterTask"
+					  Directory="System64Folder"
+					  Execute="deferred"
+					  Impersonate="no"
+					  Return="ignore"
+					  ExeCommand='cmd.exe /c "schtasks /Delete /TN "\OpenNetMeter\OpenNetMeterLogon" /F &amp; schtasks /Delete /TN "\OpenNetMeter" /F"' />
+
+		<InstallExecuteSequence>
+			<Custom Action="CloseRunningApp"
+					After="InstallInitialize"
+					Condition="WIX_UPGRADE_DETECTED OR REMOVE=&quot;ALL&quot;" />
+			<Custom Action="DeleteOpenNetMeterTask"
+					Before="RemoveFiles"
+					Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+			<Custom Action="CleanupAppData"
+					Before="InstallFinalize"
+					Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+		</InstallExecuteSequence>
+
+		<MediaTemplate EmbedCab="yes"/>
+
+		<!-- UI stuff-->
+		<UIRef Id="WixUIFeatureTree" />
+
+		<!-- components to install -->
+		<Feature Id="ProductFeature" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+			<ComponentGroupRef Id="ShortcutComponents" />
+		</Feature>
+		
+	</Package>
+	
+	<Fragment>
+		<StandardDirectory Id="ProgramFiles6432Folder">
+			<Directory Id="InstallFolder" Name="$(ProductName)"/>
+		</StandardDirectory>
+		
+		<ComponentGroup Id="ProductComponents" Directory="InstallFolder">
+			<!-- Files to install -->
+			<Files Include="$(RepoRoot)_rc\avalonia\win-x64\OpenNetMeter.exe" />
+		</ComponentGroup>
+	</Fragment>
+
+	<Fragment>
+		<!-- Declare the standard desktop folder so MSI knows where to place the shortcut -->
+		<StandardDirectory Id="DesktopFolder" />
+
+		<ComponentGroup Id="ShortcutComponents" Directory="DesktopFolder">
+			<Component Id="CmpDesktopShortcut" Guid="2dd319fe-df0c-4f5f-95d6-00a83eb09cb4" Condition="DESKTOP_SHORTCUT=&quot;1&quot;">
+				<Shortcut Id="AppDesktopShortcut"
+						  Name="$(ProductName)"
+						  Target="[InstallFolder]$(ProductName).exe"
+						  WorkingDirectory="InstallFolder" />
+
+				<!-- Key path so this component is well-formed -->
+				<RegistryValue Root="HKCU"
+							   Key="Software\$(Manufacturer)\$(ProductName)"
+							   Name="DesktopShortcutInstalled"
+							   Type="integer" Value="1" KeyPath="yes" />
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+	
+</Wix>

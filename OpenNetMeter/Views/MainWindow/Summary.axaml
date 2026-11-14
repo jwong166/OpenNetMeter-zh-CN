@@ -1,0 +1,350 @@
+<!-- 简体中文汉化修改：本文件的用户界面文案已译为简体中文，其余布局与官方版本一致。 -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:OpenNetMeter.ViewModels"
+             xmlns:ctrl="using:OpenNetMeter.Views.Controls"
+             xmlns:chart="using:OpenNetMeter.Views.Controls.Charting"
+             x:Class="OpenNetMeter.Views.MainWindowTabs.SummaryView"
+             x:DataType="vm:SummaryViewModel"
+             mc:Ignorable="d">
+  <UserControl.Styles>
+    <!-- 进程行：默认透明可命中，悬停浅高亮，选中用底色 + 左侧 2px 强调条 -->
+    <Style Selector="Border.processRow">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="2,0,0,0"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.processRow:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BrushBgSurfaceHover}"/>
+    </Style>
+    <Style Selector="Border.processRow.selected">
+      <Setter Property="Background" Value="{DynamicResource BrushPillCheckedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentBlue}"/>
+    </Style>
+
+    <Style Selector="TextBlock.dayLabel">
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextFaint}"/>
+    </Style>
+    <Style Selector="TextBlock.dayLabel.today">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextHeader}"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="12,8" RowDefinitions="*,110" ColumnDefinitions="180,12,*">
+    <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,10,Auto,10,Auto">
+      <Border Grid.Row="0" Padding="8" CornerRadius="12"
+              Background="{DynamicResource BrushSurfacePanel}" BoxShadow="{DynamicResource ShadowStrong}">
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+            <Border CornerRadius="6" Padding="4" Width="18" Height="18"
+                    Background="{DynamicResource BrushDownload}">
+              <PathIcon Data="{DynamicResource IconClock}"
+                        Foreground="{DynamicResource BrushWhite}" Width="12" Height="12"/>
+            </Border>
+            <TextBlock Text="{DynamicResource Sum.CurrentSession}" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextHeader}"
+                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+          </StackPanel>
+
+          <ctrl:StatRow Header="{DynamicResource Col.Download}" Value="{Binding CurrentSessionDownloadText}"
+                        BackgroundBrush="{DynamicResource BrushDownload}"
+                        IconData="{DynamicResource IconDownload}"/>
+          <ctrl:StatRow Header="{DynamicResource Col.Upload}" Value="{Binding CurrentSessionUploadText}"
+                        BackgroundBrush="{DynamicResource BrushUpload}"
+                        IconData="{DynamicResource IconUpload}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="2" Padding="8" CornerRadius="12"
+              Background="{DynamicResource BrushSurfacePanel}" BoxShadow="{DynamicResource ShadowStrong}">
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal">
+            <Border CornerRadius="6" Padding="4" Width="18" Height="18"
+                    Background="{DynamicResource BrushUpload}">
+              <PathIcon Data="{DynamicResource IconDatabase}"
+                        Foreground="{DynamicResource BrushWhite}" Width="12" Height="12"/>
+            </Border>
+            <TextBlock Text="{DynamicResource Sum.UsageFrom}" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextHeader}"
+                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+          </StackPanel>
+
+          <DatePicker MinWidth="0" Height="30"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                      SelectedDate="{Binding SinceDate, Mode=TwoWay}"/>
+
+          <ctrl:StatRow Header="{DynamicResource Col.Download}" Value="{Binding TotalFromDateDownloadText}"
+                        BackgroundBrush="{DynamicResource BrushDownload}"
+                        IconData="{DynamicResource IconDownload}"/>
+          <ctrl:StatRow Header="{DynamicResource Col.Upload}" Value="{Binding TotalFromDateUploadText}"
+                        BackgroundBrush="{DynamicResource BrushUpload}"
+                        IconData="{DynamicResource IconUpload}"/>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="4" Padding="8" CornerRadius="12"
+              Background="{DynamicResource BrushSurfacePanel}" BoxShadow="{DynamicResource ShadowStrong}">
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal">
+            <Border CornerRadius="6" Padding="4" Width="18" Height="18"
+                    Background="{DynamicResource BrushAccentPurple}">
+              <PathIcon Data="{DynamicResource IconChartLine}"
+                        Foreground="{DynamicResource BrushWhite}" Width="12" Height="12"/>
+            </Border>
+            <TextBlock Text="{DynamicResource Sum.WeeklyTrend}" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrushTextHeader}"
+                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding WeeklyTrend.TotalText}"
+                       Foreground="{DynamicResource BrushTextBody}"
+                       FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <Border Grid.Column="1" CornerRadius="4" Padding="4,1"
+                    Background="{DynamicResource BrushHeaderRow}"
+                    IsVisible="{Binding WeeklyTrend.HasComparison}"
+                    ToolTip.Tip="{DynamicResource Sum.WeeklyTip}">
+              <StackPanel Orientation="Horizontal" Spacing="3">
+                <PathIcon Width="8" Height="8" VerticalAlignment="Center"
+                          Foreground="{DynamicResource BrushTextSecondaryAlt}"
+                          Data="{DynamicResource IconTrendDown}"
+                          IsVisible="{Binding !WeeklyTrend.IsIncrease}"/>
+                <PathIcon Width="8" Height="8" VerticalAlignment="Center"
+                          Foreground="{DynamicResource BrushTextSecondaryAlt}"
+                          Data="{DynamicResource IconTrendUp}"
+                          IsVisible="{Binding WeeklyTrend.IsIncrease}"/>
+                <TextBlock Text="{Binding WeeklyTrend.DeltaText}" FontSize="10"
+                           Foreground="{DynamicResource BrushTextSecondaryAlt}"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding WeeklyTrend.Days}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:WeeklyUsageDayViewModel">
+                <Grid RowDefinitions="34,Auto" Margin="1,0" ToolTip.Tip="{Binding TooltipText}">
+                  <Border Grid.Row="0" CornerRadius="3"
+                          Background="{DynamicResource BrushHeaderRow}"/>
+                  <Border Grid.Row="0" CornerRadius="3" ClipToBounds="True"
+                          VerticalAlignment="Bottom" Height="{Binding TotalBarHeight}">
+                    <StackPanel>
+                      <Border Height="{Binding UploadBarHeight}"
+                              Background="{DynamicResource BrushUpload}"/>
+                      <Border Height="{Binding DownloadBarHeight}"
+                              Background="{DynamicResource BrushDownload}"/>
+                    </StackPanel>
+                  </Border>
+                  <TextBlock Grid.Row="1" Text="{Binding DayLabel}"
+                             Classes="dayLabel" Classes.today="{Binding IsToday}"
+                             FontSize="9" Margin="0,3,0,0"
+                             HorizontalAlignment="Center"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="0" Grid.Column="2" CornerRadius="12"
+            Background="{DynamicResource BrushSurfacePanel}"
+            BoxShadow="{DynamicResource ShadowStrong}"
+            Margin="0,0,0,10" Padding="0" ClipToBounds="True">
+      <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Padding="12,8"
+                Background="{DynamicResource BrushHeaderRow}"
+                BorderBrush="{DynamicResource BrushBorderEmphasis}"
+                BorderThickness="0,0,0,0.4">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <StackPanel Orientation="Horizontal">
+              <PathIcon Data="{DynamicResource IconBug}"
+                        Foreground="{DynamicResource BrushIconMuted}" Width="16" Height="16"/>
+              <TextBlock Text="{DynamicResource Sum.ActiveProcesses}" Foreground="{DynamicResource BrushTextHeader}"
+                         FontSize="12" FontWeight="SemiBold"
+                         VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </StackPanel>
+
+            <TextBox Grid.Column="1" Margin="12,0" Height="24" MaxWidth="200"
+                     HorizontalAlignment="Stretch" VerticalAlignment="Center" VerticalContentAlignment="Center"
+                     FontSize="11" Padding="6,0" CornerRadius="4"
+                     Watermark="{DynamicResource Sum.SearchWatermark}"
+                     Text="{Binding ProcessSearchText, Mode=TwoWay}"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10"
+                        HorizontalAlignment="Right" VerticalAlignment="Center">
+              <TextBlock Text="{Binding StatusHint}" FontSize="10" VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrushDownload}"
+                         IsVisible="{Binding HasStatusHint}"/>
+              <Border CornerRadius="4" Padding="5,1" IsVisible="{Binding IsTopNScope}"
+                      Background="{DynamicResource BrushHeaderRow}"
+                      ToolTip.Tip="{DynamicResource Set.ScopeCardDesc}">
+                <TextBlock Text="{Binding ScopeText}" FontSize="9"
+                           Foreground="{DynamicResource BrushTextSecondaryAlt}"/>
+              </Border>
+              <TextBlock VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrushTextSecondaryAlt}" FontSize="10"
+                         Text="{Binding ProcessCountText}"/>
+
+              <!-- Idle: open the last recording's results, or start a new recording. -->
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+                          IsVisible="{Binding IsNotRecording}">
+                <Button Classes="linkBtn" VerticalAlignment="Center"
+                        Command="{Binding ShowLastRecordingCommand}"
+                        IsVisible="{Binding HasLastRecording}"
+                        ToolTip.Tip="{DynamicResource Sum.LastResultTip}">
+                  <TextBlock Text="{DynamicResource Sum.LastResult}" FontSize="10"
+                             Foreground="{DynamicResource BrushLink}" TextDecorations="Underline"/>
+                </Button>
+                <Button Height="22" Padding="8,0" VerticalAlignment="Center"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        Command="{Binding StartRecordingCommand}"
+                        ToolTip.Tip="{DynamicResource Sum.RecordTip}"
+                        FontSize="10" CornerRadius="6"
+                        Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}"
+                        BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                             Fill="{DynamicResource BrushDangerBright}"/>
+                    <TextBlock Text="{DynamicResource Sum.Record}" FontSize="10" VerticalAlignment="Center"
+                               Foreground="{DynamicResource BrushTextUi}"/>
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+
+              <!-- Recording: elapsed time and running totals update with the 1-second flush. -->
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center"
+                          IsVisible="{Binding IsRecording}">
+                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                         Fill="{DynamicResource BrushDangerBright}"/>
+                <TextBlock VerticalAlignment="Center" FontSize="10" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrushTextHeader}"
+                           Text="{Binding RecordingElapsedDisplayText}"/>
+                <TextBlock VerticalAlignment="Center" FontSize="10"
+                           Foreground="{DynamicResource BrushTextSecondaryAlt}">
+                  <Run Text="&#x2193; "/>
+                  <Run Text="{Binding RecordingDownloadText}"/>
+                  <Run Text="  &#x2191; "/>
+                  <Run Text="{Binding RecordingUploadText}"/>
+                </TextBlock>
+                <Button Height="22" Padding="8,0" VerticalAlignment="Center"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        Command="{Binding StopRecordingCommand}"
+                        ToolTip.Tip="{DynamicResource Sum.StopTip}"
+                        FontSize="10" CornerRadius="6"
+                        Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}"
+                        BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="&#x25A0;" FontSize="10" VerticalAlignment="Center"
+                               Foreground="{DynamicResource BrushDangerBright}"/>
+                    <TextBlock Text="{Binding StopRecordingText}" FontSize="10" VerticalAlignment="Center"
+                               Foreground="{DynamicResource BrushTextUi}"/>
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="3*,1.2*,1.2*,1.2*,1.2*" Margin="10,8,10,4">
+            <ctrl:SortHeader Header="{DynamicResource Sum.Col.Name}" SortKey="Name"
+                             SortCommand="{Binding SortProcessesCommand}"
+                             CurrentSortColumn="{Binding CurrentSortColumn}"
+                             IsSortDescending="{Binding IsSortDescending}"/>
+            <ctrl:SortHeader Grid.Column="1" Header="{DynamicResource Sum.Col.CurrentDl}" SortKey="CurrentDownload"
+                             SortCommand="{Binding SortProcessesCommand}"
+                             CurrentSortColumn="{Binding CurrentSortColumn}"
+                             IsSortDescending="{Binding IsSortDescending}"/>
+            <ctrl:SortHeader Grid.Column="2" Header="{DynamicResource Sum.Col.CurrentUl}" SortKey="CurrentUpload"
+                             SortCommand="{Binding SortProcessesCommand}"
+                             CurrentSortColumn="{Binding CurrentSortColumn}"
+                             IsSortDescending="{Binding IsSortDescending}"/>
+            <ctrl:SortHeader Grid.Column="3" Header="{DynamicResource Sum.Col.TotalDl}" SortKey="TotalDownload"
+                             SortCommand="{Binding SortProcessesCommand}"
+                             CurrentSortColumn="{Binding CurrentSortColumn}"
+                             IsSortDescending="{Binding IsSortDescending}"/>
+            <ctrl:SortHeader Grid.Column="4" Header="{DynamicResource Sum.Col.TotalUl}" SortKey="TotalUpload"
+                             SortCommand="{Binding SortProcessesCommand}"
+                             CurrentSortColumn="{Binding CurrentSortColumn}"
+                             IsSortDescending="{Binding IsSortDescending}"/>
+          </Grid>
+
+          <ScrollViewer Grid.Row="1" Margin="0,0,0,6">
+            <ItemsControl ItemsSource="{Binding ActiveProcesses}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="processRow" Classes.selected="{Binding IsSelected}"
+                          Margin="4,1" Padding="6,3" CornerRadius="4"
+                          PointerPressed="ProcessRow_PointerPressed">
+                    <Border.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Command="{Binding OpenFileLocationCommand}">
+                          <MenuItem.Header>
+                            <TextBlock Text="{DynamicResource Ctx.OpenLocation}"/>
+                          </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem Command="{Binding CopyProcessNameCommand}">
+                          <MenuItem.Header>
+                            <TextBlock Text="{DynamicResource Ctx.CopyName}"/>
+                          </MenuItem.Header>
+                        </MenuItem>
+                      </ContextMenu>
+                    </Border.ContextMenu>
+                    <Grid ColumnDefinitions="3*,1.2*,1.2*,1.2*,1.2*">
+                      <Grid ColumnDefinitions="Auto,Auto,*" MinWidth="0">
+                      <Button Command="{Binding SearchProcessCommand}"
+                              Background="Transparent" BorderThickness="0"
+                              Padding="2" Cursor="Hand"
+                              ToolTip.Tip="{DynamicResource Tip.SearchOnline}">
+                        <PathIcon Data="{DynamicResource IconSearch}"
+                                  Width="12" Height="12"
+                                  Foreground="{DynamicResource BrushTextSecondary}"/>
+                      </Button>
+                      <Image Grid.Column="1" Source="{Binding Icon}" Width="16" Height="16" Margin="4,0,0,0"/>
+                      <TextBlock Grid.Column="2" Text="{Binding ProcessName}"
+                                 Foreground="{DynamicResource BrushTextBody}"
+                                 FontSize="11" TextWrapping="Wrap"
+                                 MinWidth="0" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="{Binding CurrentDownload}"
+                               Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="2" Text="{Binding CurrentUpload}"
+                               Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Top"/>
+                    <TextBlock Grid.Column="3" Text="{Binding TotalDownload}"
+                               Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Top"/>
+                      <TextBlock Grid.Column="4" Text="{Binding TotalUpload}"
+                                 Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Top"/>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+            Padding="4" CornerRadius="12"
+            Background="{DynamicResource BrushSurfacePanel}"
+            BoxShadow="{DynamicResource ShadowStrong}">
+      <chart:SpeedChart History="{Binding SpeedHistory}"
+                        AxisName="{DynamicResource Sum.ChartAxis}"
+                        Background="{DynamicResource BrushGraphBackground}"
+                        CornerRadius="6"
+                        DownloadBrush="{DynamicResource BrushDownload}"
+                        UploadBrush="{DynamicResource BrushUpload}"
+                        GridLineBrush="{DynamicResource BrushGraphGridLine}"
+                        LabelBrush="{DynamicResource BrushTextMuted}"/>
+    </Border>
+  </Grid>
+</UserControl>

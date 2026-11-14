@@ -1,0 +1,353 @@
+// 简体中文汉化修改：本文件的用户界面文案已译为简体中文，其余逻辑与官方版本一致。
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using Avalonia.Threading;
+using OpenNetMeter.Localization;
+using OpenNetMeter.Models;
+using OpenNetMeter.Properties;
+using OpenNetMeter.Services;
+using OpenNetMeter.Utilities;
+using OpenNetMeter.Core.ViewModels;
+using OpenNetMeter.PlatformAbstractions;
+
+namespace OpenNetMeter.ViewModels;
+
+public sealed class MainWindowViewModel : MainShellTabsViewModel, IDisposable
+{
+    private const string AboutRepositoryUri = "https://github.com/Ashfaaq18/OpenNetMeter";
+
+    private readonly IWindowService windowService;
+    private readonly INetworkCaptureService networkCaptureService;
+    private readonly IExternalLinkService externalLinkService;
+    private readonly MiniWidgetViewModel miniWidget;
+    private string connectedAdapterName = string.Empty;
+    private string pinnedAdapterWarning = string.Empty;
+    private bool isAboutOpen;
+
+    public MainWindowViewModel()
+        : this(new NoOpWindowService(), new NoOpNetworkCaptureService(), new NoOpProcessIconService(), new NoOpExternalLinkService(), new MiniWidgetViewModel(), new PlaceholderMiniWidgetService(), new PlaceholderStartupRegistrationService(), new NoOpThemeService(), new PlaceholderFileSaveDialogService(), new PlaceholderFileRevealService())
+    {
+    }
+
+    public MainWindowViewModel(
+        IWindowService windowService,
+        INetworkCaptureService networkCaptureService,
+        IProcessIconService processIconService,
+        IExternalLinkService externalLinkService,
+        MiniWidgetViewModel miniWidget,
+        IMiniWidgetService miniWidgetService,
+        IStartupRegistrationService startupRegistrationService,
+        IThemeService themeService,
+        IFileSaveDialogService fileSaveDialogService,
+        IFileRevealService fileRevealService)
+    {
+        this.windowService = windowService;
+        this.networkCaptureService = networkCaptureService;
+        this.externalLinkService = externalLinkService;
+        this.miniWidget = miniWidget;
+
+        Summary = new SummaryViewModel(this.networkCaptureService, processIconService, externalLinkService, fileSaveDialogService, fileRevealService);
+        History = new HistoryViewModel(processIconService, externalLinkService, fileSaveDialogService, fileRevealService);
+        Settings = new SettingsViewModel(miniWidget, miniWidgetService, startupRegistrationService, externalLinkService, themeService, fileSaveDialogService, fileRevealService, this.networkCaptureService);
+        Settings.PropertyChanged += Settings_PropertyChanged;
+        Settings.DisplayScopeChanged += Settings_DisplayScopeChanged;
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+        Settings.DeleteAllDataConfirmed += Settings_DeleteAllDataConfirmed;
+        Settings.RetentionShortened += Settings_RetentionShortened;
+        Summary.PropertyChanged += Summary_PropertyChanged;
+
+        SwitchTabCommand = new ParameterRelayCommand(parameter =>
+        {
+            if (parameter is null)
+                return;
+
+            if (int.TryParse(parameter.ToString(), out var nextIndex))
+                SelectedTabIndex = nextIndex;
+        });
+
+        AboutCommand = new RelayCommand(() => IsAboutOpen = true);
+        CloseAboutCommand = new RelayCommand(() => IsAboutOpen = false);
+        OpenAboutRepositoryCommand = new RelayCommand(() => this.externalLinkService.Open(AboutRepositoryUri));
+        MinimizeWindowCommand = new RelayCommand(() => this.windowService.MinimizeMainWindow());
+        CloseWindowCommand = new RelayCommand(() => this.windowService.CloseMainWindow());
+
+        this.networkCaptureService.NetworkChanged += OnNetworkChanged;
+        this.networkCaptureService.Start();
+        History.ReloadProfiles();
+        SyncMiniWidgetFromSummary();
+
+        // Start() raises no NetworkChanged when nothing matches at launch (e.g. a pinned adapter that
+        // is unplugged), so evaluate the warning once after any queued connect event has run.
+        Dispatcher.UIThread.Post(UpdatePinnedAdapterWarning);
+    }
+
+    public SummaryViewModel Summary { get; }
+    public HistoryViewModel History { get; }
+    public SettingsViewModel Settings { get; }
+    public string AboutVersionText => Loc.F("St.Version", Assembly.GetExecutingAssembly()?.GetName().Version?.ToString() ?? string.Empty);
+    public string AboutRepositoryUrl { get; } = AboutRepositoryUri;
+
+    public ICommand SwitchTabCommand { get; }
+    public ICommand AboutCommand { get; }
+    public ICommand CloseAboutCommand { get; }
+    public ICommand OpenAboutRepositoryCommand { get; }
+    public ICommand MinimizeWindowCommand { get; }
+    public ICommand CloseWindowCommand { get; }
+
+    public bool IsSummaryTab => SelectedTabIndex == 0;
+    public bool IsHistoryTab => SelectedTabIndex == 1;
+    public bool IsSettingsTab => SelectedTabIndex == 2;
+
+    /// <summary>连接状态文本由当前适配器名即时拼出，语言切换后无需额外刷新。</summary>
+    public string NetworkStatus => string.IsNullOrEmpty(connectedAdapterName)
+        ? Loc.S("St.Disconnected")
+        : Loc.F("St.Connected", connectedAdapterName);
+
+    public bool IsNetworkConnected => !string.IsNullOrEmpty(connectedAdapterName);
+
+    public string NetworkStatusTooltip => IsNetworkConnected
+        ? Loc.F("St.Monitoring", connectedAdapterName)
+        : Loc.S("St.NoAdapter");
+
+    private void SetConnectedAdapter(string? adapterName)
+    {
+        var next = adapterName ?? string.Empty;
+        if (string.Equals(connectedAdapterName, next, StringComparison.Ordinal))
+            return;
+
+        connectedAdapterName = next;
+        OnPropertyChanged(nameof(NetworkStatus));
+        OnPropertyChanged(nameof(IsNetworkConnected));
+        OnPropertyChanged(nameof(NetworkStatusTooltip));
+    }
+
+    /// <summary>
+    /// Shown in the status bar while a pinned adapter is selected but not connected; empty otherwise.
+    /// </summary>
+    public string PinnedAdapterWarning
+    {
+        get => pinnedAdapterWarning;
+        private set
+        {
+            if (pinnedAdapterWarning == value)
+                return;
+            pinnedAdapterWarning = value;
+            OnPropertyChanged(nameof(PinnedAdapterWarning));
+            OnPropertyChanged(nameof(HasPinnedAdapterWarning));
+        }
+    }
+
+    public bool HasPinnedAdapterWarning => pinnedAdapterWarning.Length > 0;
+
+    public bool IsAboutOpen
+    {
+        get => isAboutOpen;
+        private set
+        {
+            if (isAboutOpen == value)
+                return;
+
+            isAboutOpen = value;
+            OnPropertyChanged(nameof(IsAboutOpen));
+            OnPropertyChanged(nameof(IsModalOpen));
+        }
+    }
+
+    /// <summary>
+    /// True while an in-window dialog is shown; the rest of the window is disabled so focus can't escape to it.
+    /// </summary>
+    public bool IsModalOpen => IsAboutOpen || Settings.IsConfirmationOpen || Summary.IsRecordingResultsOpen;
+
+    public override int SelectedTabIndex
+    {
+        get => base.SelectedTabIndex;
+        set
+        {
+            if (base.SelectedTabIndex == value)
+                return;
+
+            base.SelectedTabIndex = value;
+            OnPropertyChanged(nameof(IsSummaryTab));
+            OnPropertyChanged(nameof(IsHistoryTab));
+            OnPropertyChanged(nameof(IsSettingsTab));
+        }
+    }
+
+    public void Dispose()
+    {
+        Settings.PropertyChanged -= Settings_PropertyChanged;
+        Settings.DisplayScopeChanged -= Settings_DisplayScopeChanged;
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
+        Settings.DeleteAllDataConfirmed -= Settings_DeleteAllDataConfirmed;
+        Settings.RetentionShortened -= Settings_RetentionShortened;
+        Summary.PropertyChanged -= Summary_PropertyChanged;
+        Summary.Dispose();
+        networkCaptureService.NetworkChanged -= OnNetworkChanged;
+        networkCaptureService.Dispose();
+    }
+
+    private void OnNetworkChanged(object? sender, NetworkSnapshotChangedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(e.AdapterName))
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                SetConnectedAdapter(null);
+                UpdatePinnedAdapterWarning();
+                Summary.ClearOnDisconnect();
+                Settings.RefreshAdapterChoices();
+            });
+            return;
+        }
+
+        var adapterName = e.AdapterName;
+        Dispatcher.UIThread.Post(() =>
+        {
+            SetConnectedAdapter(adapterName);
+            UpdatePinnedAdapterWarning();
+            Summary.SetActiveAdapter(adapterName);
+            History.ReloadProfiles();
+            Settings.RefreshAdapterChoices();
+        });
+    }
+
+    /// <summary>
+    /// Warns when a pinned adapter is selected but not connected (nothing is counted then).
+    /// Clears when connected or when selection is Automatic.
+    /// </summary>
+    private void UpdatePinnedAdapterWarning()
+    {
+        var settings = SettingsManager.Current;
+        PinnedAdapterWarning = PinnedAdapterStatus.GetWarningText(settings.NetworkAdapterId, settings.NetworkAdapterName, IsNetworkConnected);
+    }
+
+    private void Settings_DisplayScopeChanged()
+    {
+        Summary.RefreshDisplayScope();
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        // 空属性名 = 全部属性刷新；托盘菜单等非绑定界面由各自的服务处理。
+        OnPropertyChanged(string.Empty);
+    }
+
+    private void Settings_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsViewModel.SelectedSpeedMagnitudeIndex) ||
+            e.PropertyName == nameof(SettingsViewModel.SelectedSpeedUnitIndex))
+        {
+            Summary.RefreshSpeedDisplayFormat();
+        }
+        else if (e.PropertyName == nameof(SettingsViewModel.IsConfirmationOpen))
+        {
+            OnPropertyChanged(nameof(IsModalOpen));
+        }
+        else if (e.PropertyName == nameof(SettingsViewModel.SelectedAdapterChoice))
+        {
+            // Automatic clears the warning immediately; a pinned adapter warns while disconnected.
+            // The re-evaluation the selection triggers updates it again through NetworkChanged.
+            UpdatePinnedAdapterWarning();
+        }
+    }
+
+    private void Settings_DeleteAllDataConfirmed()
+    {
+        bool wasConnected = IsNetworkConnected;
+
+        if (wasConnected)
+        {
+            networkCaptureService.Stop();
+            Summary.ClearOnDisconnect();
+            SetConnectedAdapter(null);
+        }
+
+        History.DeleteAllDbFiles();
+
+        if (wasConnected)
+        {
+            networkCaptureService.Start();
+        }
+
+        History.ReloadProfiles();
+    }
+
+    private async void Settings_RetentionShortened()
+    {
+        try
+        {
+            await Task.Run(ApplicationDB.ApplyRetention);
+            History.Refresh();
+            Summary.RefreshAfterHistoryPurge();
+        }
+        catch (Exception ex)
+        {
+            EventLogger.Error("Failed to apply history retention", ex);
+        }
+    }
+
+    private void Summary_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(SummaryViewModel.DownloadSpeedText):
+            case nameof(SummaryViewModel.UploadSpeedText):
+            case nameof(SummaryViewModel.CurrentSessionDownloadText):
+            case nameof(SummaryViewModel.CurrentSessionUploadText):
+                SyncMiniWidgetFromSummary();
+                break;
+            case nameof(SummaryViewModel.IsRecordingResultsOpen):
+                OnPropertyChanged(nameof(IsModalOpen));
+                break;
+        }
+    }
+
+    private void SyncMiniWidgetFromSummary()
+    {
+        miniWidget.DownloadSpeedText = Summary.DownloadSpeedText;
+        miniWidget.UploadSpeedText = Summary.UploadSpeedText;
+        miniWidget.CurrentSessionDownloadText = Summary.CurrentSessionDownloadText;
+        miniWidget.CurrentSessionUploadText = Summary.CurrentSessionUploadText;
+    }
+
+    private sealed class NoOpWindowService : IWindowService
+    {
+        public void MinimizeMainWindow() { }
+        public void CloseMainWindow() { }
+        public void ShowAbout() { }
+    }
+
+    private sealed class NoOpNetworkCaptureService : INetworkCaptureService
+    {
+        public event EventHandler<NetworkSnapshotChangedEventArgs>? NetworkChanged
+        {
+            add { }
+            remove { }
+        }
+        public event EventHandler<NetworkTrafficEventArgs>? TrafficObserved
+        {
+            add { }
+            remove { }
+        }
+
+        public void Start() { }
+        public void Stop() { }
+        public IReadOnlyList<NetworkAdapterOption> GetAvailableAdapters() => [];
+        public void RefreshAdapterSelection() { }
+        public void Dispose() { }
+    }
+
+    private sealed class NoOpProcessIconService : IProcessIconService
+    {
+        public object? GetProcessIcon(string processName) => null;
+    }
+
+    private sealed class NoOpExternalLinkService : IExternalLinkService
+    {
+        public void Open(string uri) { }
+    }
+}
+

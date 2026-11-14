@@ -1,0 +1,425 @@
+﻿<UserControl x:Class="OpenNetMeter.Views.SettingsV"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:v="clr-namespace:OpenNetMeter.Views"
+             xmlns:vm="clr-namespace:OpenNetMeter.ViewModels"
+             xmlns:properties="clr-namespace:OpenNetMeter.Properties"
+             mc:Ignorable="d" 
+             d:DesignHeight="1200" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <v:RadioBoolToIntConverter x:Key="radioBoolToIntConverter" />
+        <properties:AppSettings x:Key="Settings"/>
+
+        <!-- Modern Toggle Switch Template -->
+        <Style x:Key="ModernToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid>
+                            <Border x:Name="SwitchBorder" 
+                            Width="44" Height="24" 
+                            CornerRadius="12"
+                            Background="{StaticResource BrushSurfaceDivider}">
+                                <Grid>
+                                    <Ellipse x:Name="SwitchThumb" 
+                                     Width="20" Height="20" 
+                                     Fill="{StaticResource BrushWhite}"
+                                     HorizontalAlignment="Left"
+                                     Margin="2,0,0,0">
+                                        <Ellipse.Effect>
+                                            <DropShadowEffect ShadowDepth="1" 
+                                                    BlurRadius="2" 
+                                                    Opacity="0.2" 
+                                                    Direction="270"/>
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="SwitchBorder" Property="Background" Value="{StaticResource BrushAccentTeal}"/>
+                                <Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="SwitchThumb" Property="Margin" Value="0,0,2,0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="SwitchBorder" Property="Opacity" Value="0.5"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{StaticResource BrushSurfaceLight}"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushMutedRadioText}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushBorderLight}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                            Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BrushSurfaceHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BrushNeutralHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Destructive Button Style -->
+        <Style x:Key="DestructiveButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{StaticResource BrushDanger}"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushWhite}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BrushDanger}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BrushDangerHover}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BrushDangerHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BrushDangerPressed}"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource BrushDangerPressed}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Main Background -->
+    <Grid Style="{StaticResource BackgroundColor2}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24" MaxWidth="800">
+                
+                <!-- General Settings Card -->
+                <Border Style="{StaticResource ModernCard}" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Header -->
+                        <Border Grid.Row="0" Style="{StaticResource CardHeaderStyle}" 
+                                CornerRadius="8,8,0,0">
+                            <TextBlock Text="General Settings" Style="{StaticResource TitleText}" 
+                                     Margin="24,0,0,0"/>
+                        </Border>
+                        
+                        <!-- Content -->
+                        <StackPanel Grid.Row="1" Margin="24,20">
+                            <!-- Start on Windows Startup -->
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Start program on Windows startup" 
+                                             Style="{StaticResource PrimaryText}"/>
+                                    <TextBlock Text="Launch automatically when Windows starts" 
+                                             Style="{StaticResource SecondaryText}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" Style="{StaticResource ModernToggleSwitch}"
+                                        IsChecked="{Binding SetStartWithWin}" 
+                                        IsEnabled="{Binding UnlockOptionStartWin}"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Minimize to Tray -->
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Minimize to system tray on start" 
+                                             Style="{StaticResource PrimaryText}"/>
+                                    <TextBlock Text="Start minimized in the system tray" 
+                                             Style="{StaticResource SecondaryText}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" Style="{StaticResource ModernToggleSwitch}"
+                                        IsChecked="{Binding MinimizeOnStart}" 
+                                        IsEnabled="{Binding UnlockMinimizeOnStart}"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Dark Mode -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Dark mode" Style="{StaticResource PrimaryText}"/>
+                                    <TextBlock Text="Use dark theme for the interface" 
+                                             Style="{StaticResource SecondaryText}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" Style="{StaticResource ModernToggleSwitch}"
+                                        IsChecked="{Binding DarkMode}"
+                                        VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Mini Widget Card -->
+                <Border Style="{StaticResource ModernCard}" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Border Grid.Row="0" Style="{StaticResource CardHeaderStyle}" 
+                                CornerRadius="8,8,0,0">
+                            <TextBlock Text="Mini Widget" Style="{StaticResource TitleText}" 
+                                     Margin="24,0,0,0"/>
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Margin="24,20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                    <TextBlock Text="Show mini widget" Style="{StaticResource PrimaryText}"/>
+                                    <TextBlock Text="Toggle the mini widget visibility" Style="{StaticResource SecondaryText}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1"
+                                          Style="{StaticResource ModernToggleSwitch}"
+                                          IsChecked="{Binding MiniWidgetVisibility}"
+                                          VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Border Height="1" Background="{StaticResource BrushSurfaceDivider}" Margin="0,20,0,20"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Transparency" Style="{StaticResource PrimaryText}" 
+                                     VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource SecondaryText}">
+                                <Run Text="{Binding MiniWidgetTransparentSlider}"/>
+                                <Run Text="%"/>
+                                </TextBlock>
+                            </Grid>
+
+                            <Slider Margin="0,12,0,8" 
+                                    Minimum="0" Maximum="100" 
+                                    Value="{Binding MiniWidgetTransparentSlider}"
+                                    IsEnabled="{Binding MiniWidgetVisibility}"
+                                    Style="{StaticResource ModernSlider}"/>
+        
+                            <Grid>
+                                <TextBlock HorizontalAlignment="Left" Text="0%" Style="{StaticResource SecondaryText}"/>
+                                <TextBlock HorizontalAlignment="Right" Text="100%" Style="{StaticResource SecondaryText}"/>
+                            </Grid>
+
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Network Monitoring Card -->
+                <Border Style="{StaticResource ModernCard}" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Border Grid.Row="0" Style="{StaticResource CardHeaderStyle}" 
+                                CornerRadius="8,8,0,0">
+                            <TextBlock Text="Network Monitoring" Style="{StaticResource TitleText}" 
+                                     Margin="24,0,0,0"/>
+                        </Border>
+                        
+                        <StackPanel Grid.Row="1" Margin="24,20">
+                            <!-- Monitor Networks Section -->
+                            <StackPanel Margin="0,0,0,20">
+                                <TextBlock Text="Monitor these networks" Style="{StaticResource PrimaryText}" 
+                                         Margin="0,0,0,8"/>
+                                <TextBlock Text="(set to public for internet only)" Style="{StaticResource SecondaryText}" 
+                                         Margin="0,0,0,12"/>
+                                <StackPanel>
+                                    <RadioButton IsChecked="{Binding Path=NetworkTrafficType, Converter={StaticResource radioBoolToIntConverter}, ConverterParameter=0}" 
+                                               Content="Private" Margin="0,0,0,8" Style="{StaticResource ModernRadioButton}"/>
+                                    <RadioButton IsChecked="{Binding Path=NetworkTrafficType, Converter={StaticResource radioBoolToIntConverter}, ConverterParameter=1}" 
+                                               Content="Public" Margin="0,0,0,8" Style="{StaticResource ModernRadioButton}"/>
+                                    <RadioButton IsChecked="{Binding Path=NetworkTrafficType, Converter={StaticResource radioBoolToIntConverter}, ConverterParameter=2}" 
+                                               Content="Both" Style="{StaticResource ModernRadioButton}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Separator -->
+                            <Border Height="1" Background="{StaticResource BrushSurfaceDivider}" Margin="0,4,0,20"/>
+
+                            <!-- Network Speed Format -->
+                            <StackPanel>
+                                <TextBlock Text="Network speed format" Style="{StaticResource PrimaryText}" 
+                                         Margin="0,0,0,12"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <ComboBox Width="180" Margin="0,0,16,0"
+                                            SelectedValuePath="Tag" 
+                                            SelectedValue="{Binding NetworkSpeedMagnitude}"
+                                            Style="{StaticResource ComboBoxFlatStyle}">
+                                        <ComboBoxItem Tag="0" Content="Auto"/>
+                                        <ComboBoxItem Tag="1" Content="Kilo"/>
+                                        <ComboBoxItem Tag="2" Content="Mega"/>
+                                        <ComboBoxItem Tag="3" Content="Giga"/>
+                                    </ComboBox>
+                                    <ComboBox Width="180"
+                                            SelectedValuePath="Tag" 
+                                            SelectedValue="{Binding NetworkSpeedFormat}"
+                                            Style="{StaticResource ComboBoxFlatStyle}">
+                                        <ComboBoxItem Tag="0" Content="bps (bits/sec)"/>
+                                        <ComboBoxItem Tag="1" Content="Bps (bytes/sec)"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Data Management Card -->
+                <Border Style="{StaticResource ModernCard}" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Border Grid.Row="0" Style="{StaticResource CardHeaderStyle}" 
+                                CornerRadius="8,8,0,0">
+                            <TextBlock Text="Data Management" Style="{StaticResource TitleText}" 
+                                     Margin="24,0,0,0"/>
+                        </Border>
+                        
+                        <StackPanel Grid.Row="1" Margin="24,20">
+                            <TextBlock Text="Delete all saved profiles" Style="{StaticResource PrimaryText}" 
+                                     Margin="0,0,0,4"/>
+                            <TextBlock Text="Remove all network usage history and profiles" 
+                                     Style="{StaticResource SecondaryText}" Margin="0,0,0,16"/>
+                            <Button Command="{Binding ResetBtn}" Style="{StaticResource DestructiveButton}"
+                                    HorizontalAlignment="Stretch">
+                                <TextBlock Text="DELETE ALL" FontWeight="SemiBold"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Updates Card -->
+                <Border Style="{StaticResource ModernCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Border Grid.Row="0" Style="{StaticResource CardHeaderStyle}" 
+                                CornerRadius="8,8,0,0">
+                            <TextBlock Text="Updates" Style="{StaticResource TitleText}" 
+                                     Margin="24,0,0,0"/>
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Margin="24,20">
+                            <TextBlock Text="Ensure you have the latest features and improvements" 
+                                     Style="{StaticResource SecondaryText}" Margin="0,0,0,16"/>
+                            
+                            <!-- Update Status Message -->
+                            <TextBlock Text="{Binding UpdateStatusMessage}" 
+                                     Style="{StaticResource SecondaryText}"
+                                     HorizontalAlignment="Center"
+                                     Margin="0,0,0,12"/>
+                            
+                            <!-- Progress Bar -->
+                            <ProgressBar Height="4" Margin="0,0,0,12"
+                                       IsIndeterminate="True">
+                                <ProgressBar.Style>
+                                    <Style TargetType="ProgressBar">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCheckingForUpdates}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ProgressBar.Style>
+                            </ProgressBar>
+                            
+                            <!-- Buttons -->
+                            <Grid>
+                                <Button Command="{Binding UpdateCheckBtn}" 
+                                        HorizontalAlignment="Stretch">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUpdateAvailable}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="Check for updates"/>
+                                </Button>
+                                
+                                <Button Command="{Binding DownloadUpdateBtn}"
+                                        HorizontalAlignment="Stretch">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUpdateAvailable}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="Download"/>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

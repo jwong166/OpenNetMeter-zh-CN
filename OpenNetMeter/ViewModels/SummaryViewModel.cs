@@ -1,0 +1,822 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Windows.Input;
+using Avalonia.Threading;
+using Avalonia.Media;
+using OpenNetMeter.Models;
+using OpenNetMeter.Localization;
+using OpenNetMeter.PlatformAbstractions;
+using OpenNetMeter.Services;
+using OpenNetMeter.Utilities;
+using OpenNetMeter.Views.Controls.Charting;
+
+namespace OpenNetMeter.ViewModels;
+
+public sealed class SummaryViewModel : INotifyPropertyChanged, IDisposable
+{
+    private readonly INetworkCaptureService networkCaptureService;
+    private readonly IProcessIconService processIconService;
+    private readonly IExternalLinkService externalLinkService;
+    private readonly IFileSaveDialogService fileSaveDialogService;
+    private readonly IFileRevealService fileRevealService;
+    private readonly Dictionary<string, SummaryProcessRowViewModel> processIndex = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object pendingLock = new();
+    private readonly Dictionary<string, PendingTraffic> pendingByProcess = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DispatcherTimer flushTimer;
+    private string? currentSortColumn;
+    private bool sortDescending;
+    private string activeAdapterName = string.Empty;
+    private long sinceDateDbDownloadBaseline;
+    private long sinceDateDbUploadBaseline;
+    private long sinceDateSessionDownloadBaseline;
+    private long sinceDateSessionUploadBaseline;
+    private long currentSessionDownload;
+    private long currentSessionUpload;
+    private long totalFromDateDownload;
+    private long totalFromDateUpload;
+    private DateTimeOffset? sinceDate;
+    private long pendingDownloadBytes;
+    private long pendingUploadBytes;
+    private long latestDownloadBytesPerSecond;
+    private long latestUploadBytesPerSecond;
+    private int weeklyTrendTickCounter;
+    private TrafficRecording? recording;
+    private RecordingResultsViewModel? lastRecordingResults;
+    private bool isRecordingResultsOpen;
+
+    /// <summary>本次会话出现过的全部进程，界面列表只是它经过筛选/排名/排序后的投影。</summary>
+    private readonly List<SummaryProcessRowViewModel> allProcesses = [];
+    private string processSearchText = string.Empty;
+    private string statusHint = string.Empty;
+
+    private readonly DispatcherTimer statusHintTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
+
+    private readonly SpeedHistory speedHistory = new();
+
+    public SummaryViewModel(
+        INetworkCaptureService networkCaptureService,
+        IProcessIconService processIconService,
+        IExternalLinkService externalLinkService,
+        IFileSaveDialogService fileSaveDialogService,
+        IFileRevealService fileRevealService)
+    {
+        this.networkCaptureService = networkCaptureService;
+        this.processIconService = processIconService;
+        this.externalLinkService = externalLinkService;
+        this.fileSaveDialogService = fileSaveDialogService;
+        this.fileRevealService = fileRevealService;
+
+        ActiveProcesses = [];
+        SortProcessesCommand = new ParameterRelayCommand(parameter =>
+        {
+            var column = parameter?.ToString();
+            if (string.IsNullOrWhiteSpace(column))
+                return;
+
+            SortProcesses(column);
+        });
+
+        StartRecordingCommand = new RelayCommand(StartRecording);
+        StopRecordingCommand = new RelayCommand(StopRecording);
+        ShowLastRecordingCommand = new RelayCommand(ShowLastRecording);
+        CloseRecordingResultsCommand = new RelayCommand(CloseRecordingResults);
+
+        WeeklyTrend = new WeeklyUsageTrendViewModel();
+
+        DateMax = DateTime.Today;
+        sinceDate = DateMax;
+        this.networkCaptureService.TrafficObserved += OnTrafficObserved;
+
+        flushTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        flushTimer.Tick += (_, _) => FlushPendingTraffic();
+        flushTimer.Start();
+
+        statusHintTimer.Tick += (_, _) =>
+        {
+            statusHintTimer.Stop();
+            SetStatusHint(string.Empty);
+        };
+
+        LocalizationService.LanguageChanged += OnLanguageChanged;
+    }
+    public ObservableCollection<SummaryProcessRowViewModel> ActiveProcesses { get; }
+    public ICommand SortProcessesCommand { get; }
+    public ICommand StartRecordingCommand { get; }
+    public ICommand StopRecordingCommand { get; }
+    public ICommand ShowLastRecordingCommand { get; }
+    public ICommand CloseRecordingResultsCommand { get; }
+    public WeeklyUsageTrendViewModel WeeklyTrend { get; }
+
+    public SpeedHistory SpeedHistory => speedHistory;
+
+    public string? CurrentSortColumn => currentSortColumn;
+    public bool IsSortDescending => sortDescending;
+
+    public string CurrentSessionDownloadText => ByteSizeFormatter.FormatBytes(currentSessionDownload);
+    public string CurrentSessionUploadText => ByteSizeFormatter.FormatBytes(currentSessionUpload);
+    public string TotalFromDateDownloadText => ByteSizeFormatter.FormatBytes(totalFromDateDownload);
+    public string TotalFromDateUploadText => ByteSizeFormatter.FormatBytes(totalFromDateUpload);
+    public string DownloadSpeedText => FormatSpeed(latestDownloadBytesPerSecond) + "ps";
+    public string UploadSpeedText => FormatSpeed(latestUploadBytesPerSecond) + "ps";
+    public int ProcessCount => ActiveProcesses.Count;
+    public string ProcessCountText => Loc.F("Sum.ProcessCount", ProcessCount);
+
+    /// <summary>按进程名过滤的输入；为空表示不过滤。过滤只影响显示，不丢弃已统计的数据。</summary>
+    public string ProcessSearchText
+    {
+        get => processSearchText;
+        set
+        {
+            var next = value ?? string.Empty;
+            if (string.Equals(processSearchText, next, StringComparison.Ordinal))
+                return;
+
+            processSearchText = next;
+            OnPropertyChanged(nameof(ProcessSearchText));
+            ApplyVisibleProcesses();
+        }
+    }
+
+    /// <summary>当前是否处于“仅显示前 N 名”模式。</summary>
+    public bool IsTopNScope => Properties.SettingsManager.Current.ProcessDisplayMode == 1;
+
+    public string ScopeText => Loc.F("Sum.ScopeTopN", Math.Clamp(Properties.SettingsManager.Current.ProcessTopNCount, 1, 100));
+
+    /// <summary>右键菜单等操作的短暂反馈文本，几秒后自动消失。</summary>
+    public string StatusHint => statusHint;
+    public bool HasStatusHint => statusHint.Length > 0;
+
+    /// <summary>当前选中的进程行；右键菜单与强调样式都以它为准。</summary>
+    public SummaryProcessRowViewModel? SelectedProcess { get; private set; }
+
+    /// <summary>选中某一行（传 null 取消选中）。同一时刻只允许一行处于选中态。</summary>
+    public void SelectProcess(SummaryProcessRowViewModel? row)
+    {
+        if (ReferenceEquals(SelectedProcess, row))
+            return;
+
+        SelectedProcess?.SetSelected(false);
+        SelectedProcess = row;
+        SelectedProcess?.SetSelected(true);
+
+        OnPropertyChanged(nameof(SelectedProcess));
+    }
+    public DateTime DateMin =>
+        HistoryRetention.GetCutoff(DateMax, Properties.SettingsManager.Current.HistoryRetentionDays) ?? DateTime.MinValue;
+    public DateTime DateMax { get; }
+
+    public bool IsRecording => recording is { IsRunning: true };
+    public bool IsNotRecording => !IsRecording;
+    public bool HasLastRecording => lastRecordingResults != null;
+    public string RecordingElapsedText => recording is { } running
+        ? TrafficRecording.FormatElapsed(running.GetDuration(DateTime.Now))
+        : TrafficRecording.FormatElapsed(TimeSpan.Zero);
+
+    /// <summary>“录制 00:42”这类带前缀的完整文本，前缀随语言变化。</summary>
+    public string RecordingElapsedDisplayText => $"{Loc.S("Sum.RecordPrefix")} {RecordingElapsedText}";
+
+    public string StopRecordingText => Loc.S("Sum.Stop");
+    public string RecordingDownloadText => ByteSizeFormatter.FormatBytes(recording?.TotalDownload ?? 0);
+    public string RecordingUploadText => ByteSizeFormatter.FormatBytes(recording?.TotalUpload ?? 0);
+    public RecordingResultsViewModel? LastRecordingResults => lastRecordingResults;
+
+    public bool IsRecordingResultsOpen
+    {
+        get => isRecordingResultsOpen;
+        private set
+        {
+            if (isRecordingResultsOpen == value)
+                return;
+            isRecordingResultsOpen = value;
+            OnPropertyChanged(nameof(IsRecordingResultsOpen));
+        }
+    }
+
+    public static string FormatSpeed(long bytesPerSecond)
+    {
+        var useBytes = Properties.SettingsManager.Current.NetworkSpeedFormat != 0;
+        var magnitude = NetworkSpeed.NormalizeMagnitude(Properties.SettingsManager.Current.NetworkSpeedMagnitude);
+        var value = useBytes ? bytesPerSecond : bytesPerSecond * 8;
+        var (adjustedSize, mag) = NetworkSpeed.GetAdjustedSize(value, magnitude);
+        return decimal.Round(adjustedSize, 2).ToString() + (useBytes ? NetworkSpeed.BytesSuffix(mag) : NetworkSpeed.BitsSuffix(mag));
+    }
+    
+    public DateTimeOffset? SinceDate
+    {
+        get => sinceDate;
+        set
+        {
+            var normalized = NormalizeSinceDate(value);
+            if (sinceDate == normalized)
+                return;
+
+            sinceDate = normalized;
+            RefreshSinceDateBaseline();
+            OnPropertyChanged(nameof(SinceDate));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void Dispose()
+    {
+        networkCaptureService.TrafficObserved -= OnTrafficObserved;
+        LocalizationService.LanguageChanged -= OnLanguageChanged;
+        statusHintTimer.Stop();
+        flushTimer.Stop();
+    }
+
+    public void ClearOnDisconnect()
+    {
+        lock (pendingLock)
+        {
+            pendingDownloadBytes = 0;
+            pendingUploadBytes = 0;
+            pendingByProcess.Clear();
+        }
+
+        latestDownloadBytesPerSecond = 0;
+        latestUploadBytesPerSecond = 0;
+        currentSessionDownload = 0;
+        currentSessionUpload = 0;
+        totalFromDateDownload = 0;
+        totalFromDateUpload = 0;
+        sinceDateDbDownloadBaseline = 0;
+        sinceDateDbUploadBaseline = 0;
+        sinceDateSessionDownloadBaseline = 0;
+        sinceDateSessionUploadBaseline = 0;
+        activeAdapterName = string.Empty;
+
+        speedHistory.Clear();
+        weeklyTrendTickCounter = 0;
+        WeeklyTrend.Reset();
+
+        SelectProcess(null);
+        ActiveProcesses.Clear();
+        allProcesses.Clear();
+        processIndex.Clear();
+        OnPropertyChanged(nameof(ProcessCount));
+        OnPropertyChanged(nameof(ProcessCountText));
+        OnPropertyChanged(nameof(CurrentSessionDownloadText));
+        OnPropertyChanged(nameof(CurrentSessionUploadText));
+        OnPropertyChanged(nameof(TotalFromDateDownloadText));
+        OnPropertyChanged(nameof(TotalFromDateUploadText));
+        OnPropertyChanged(nameof(DownloadSpeedText));
+        OnPropertyChanged(nameof(UploadSpeedText));
+    }
+
+    /// <summary>
+    /// Re-reads DB-backed totals after old history was purged, clamping the "since" date to the new retention.
+    /// </summary>
+    public void RefreshAfterHistoryPurge()
+    {
+        var normalized = NormalizeSinceDate(sinceDate);
+        if (sinceDate != normalized)
+        {
+            sinceDate = normalized;
+            OnPropertyChanged(nameof(SinceDate));
+        }
+
+        RefreshSinceDateBaseline();
+        RefreshWeeklyTrend();
+    }
+
+    public void SetActiveAdapter(string adapterName)
+    {
+        var normalized = adapterName?.Trim() ?? string.Empty;
+        if (string.Equals(activeAdapterName, normalized, StringComparison.Ordinal))
+            return;
+
+        activeAdapterName = normalized;
+        if (recording is { IsRunning: true })
+            recording.NoteAdapter(activeAdapterName);
+
+        RefreshSinceDateBaseline();
+        RefreshWeeklyTrend();
+    }
+
+    private void StartRecording()
+    {
+        if (IsRecording)
+            return;
+
+        // A recording keeps running across disconnects and adapter switches, so it is deliberately
+        // not touched by ClearOnDisconnect; it only ends when the user presses Stop.
+        recording = new TrafficRecording(DateTime.Now);
+        recording.NoteAdapter(activeAdapterName);
+        NotifyRecordingChanged();
+    }
+
+    private void StopRecording()
+    {
+        if (recording is not { IsRunning: true } stopping)
+            return;
+
+        stopping.Stop(DateTime.Now);
+        lastRecordingResults = new RecordingResultsViewModel(stopping, processIconService, externalLinkService, fileSaveDialogService, fileRevealService);
+        recording = null;
+        IsRecordingResultsOpen = true;
+        NotifyRecordingChanged();
+    }
+
+    private void ShowLastRecording()
+    {
+        if (HasLastRecording)
+            IsRecordingResultsOpen = true;
+    }
+
+    private void CloseRecordingResults()
+    {
+        IsRecordingResultsOpen = false;
+    }
+
+    private void NotifyRecordingChanged()
+    {
+        OnPropertyChanged(nameof(IsRecording));
+        OnPropertyChanged(nameof(IsNotRecording));
+        OnPropertyChanged(nameof(HasLastRecording));
+        OnPropertyChanged(nameof(LastRecordingResults));
+        OnPropertyChanged(nameof(RecordingElapsedText));
+        OnPropertyChanged(nameof(RecordingElapsedDisplayText));
+        OnPropertyChanged(nameof(RecordingDownloadText));
+        OnPropertyChanged(nameof(RecordingUploadText));
+    }
+
+    private void OnTrafficObserved(object? sender, NetworkTrafficEventArgs e)
+    {
+        lock (pendingLock)
+        {
+            if (!pendingByProcess.TryGetValue(e.ProcessName, out var pending))
+            {
+                pending = new PendingTraffic();
+                pendingByProcess[e.ProcessName] = pending;
+            }
+
+            if (e.IsReceive)
+            {
+                pending.DownloadBytes += e.Bytes;
+                pendingDownloadBytes += e.Bytes;
+            }
+            else
+            {
+                pending.UploadBytes += e.Bytes;
+                pendingUploadBytes += e.Bytes;
+            }
+        }
+    }
+
+    private void FlushPendingTraffic()
+    {
+        Dictionary<string, PendingTraffic> pendingSnapshot;
+        long secondDownloadBytes;
+        long secondUploadBytes;
+
+        lock (pendingLock)
+        {
+            secondDownloadBytes = pendingDownloadBytes;
+            secondUploadBytes = pendingUploadBytes;
+            pendingDownloadBytes = 0;
+            pendingUploadBytes = 0;
+
+            pendingSnapshot = new Dictionary<string, PendingTraffic>(pendingByProcess, StringComparer.OrdinalIgnoreCase);
+            pendingByProcess.Clear();
+        }
+
+        latestDownloadBytesPerSecond = secondDownloadBytes;
+        latestUploadBytesPerSecond = secondUploadBytes;
+        currentSessionDownload += secondDownloadBytes;
+        currentSessionUpload += secondUploadBytes;
+        UpdateTotalFromDateFromBaselines();
+
+        speedHistory.Append(latestDownloadBytesPerSecond, latestUploadBytesPerSecond);
+        ApplyProcessTick(pendingSnapshot);
+
+        if (recording is { IsRunning: true })
+        {
+            foreach (var kvp in pendingSnapshot)
+                recording.Add(kvp.Key, kvp.Value.DownloadBytes, kvp.Value.UploadBytes);
+
+            OnPropertyChanged(nameof(RecordingElapsedText));
+            OnPropertyChanged(nameof(RecordingDownloadText));
+            OnPropertyChanged(nameof(RecordingUploadText));
+        }
+
+        // The capture service pushes to the DB every 5s, so re-reading the week this often
+        // keeps today's bar close to live without querying on every tick.
+        if (++weeklyTrendTickCounter >= WeeklyTrendRefreshTicks)
+            RefreshWeeklyTrend();
+
+        OnPropertyChanged(nameof(CurrentSessionDownloadText));
+        OnPropertyChanged(nameof(CurrentSessionUploadText));
+        OnPropertyChanged(nameof(TotalFromDateDownloadText));
+        OnPropertyChanged(nameof(TotalFromDateUploadText));
+        OnPropertyChanged(nameof(DownloadSpeedText));
+        OnPropertyChanged(nameof(UploadSpeedText));
+    }
+
+    /// <summary>Flush ticks (one per second) between reloads of the weekly trend card.</summary>
+    private const int WeeklyTrendRefreshTicks = 15;
+
+    private void RefreshWeeklyTrend()
+    {
+        weeklyTrendTickCounter = 0;
+        WeeklyTrend.Refresh(activeAdapterName);
+    }
+
+    private void RefreshSinceDateBaseline()
+    {
+        sinceDateSessionDownloadBaseline = currentSessionDownload;
+        sinceDateSessionUploadBaseline = currentSessionUpload;
+
+        if (string.IsNullOrWhiteSpace(activeAdapterName))
+        {
+            sinceDateDbDownloadBaseline = 0;
+            sinceDateDbUploadBaseline = 0;
+            totalFromDateDownload = 0;
+            totalFromDateUpload = 0;
+        }
+        else
+        {
+            var fromDate = (sinceDate ?? DateTimeOffset.Now.Date).Date;
+            var totals = ReadDbTotals(activeAdapterName, fromDate, DateTime.Today);
+            sinceDateDbDownloadBaseline = totals.download;
+            sinceDateDbUploadBaseline = totals.upload;
+            UpdateTotalFromDateFromBaselines();
+        }
+
+        OnPropertyChanged(nameof(TotalFromDateDownloadText));
+        OnPropertyChanged(nameof(TotalFromDateUploadText));
+    }
+
+    private void UpdateTotalFromDateFromBaselines()
+    {
+        var sessionDownloadDelta = currentSessionDownload - sinceDateSessionDownloadBaseline;
+        var sessionUploadDelta = currentSessionUpload - sinceDateSessionUploadBaseline;
+
+        if (sessionDownloadDelta < 0)
+            sessionDownloadDelta = 0;
+        if (sessionUploadDelta < 0)
+            sessionUploadDelta = 0;
+
+        totalFromDateDownload = sinceDateDbDownloadBaseline + sessionDownloadDelta;
+        totalFromDateUpload = sinceDateDbUploadBaseline + sessionUploadDelta;
+    }
+
+    private static (long download, long upload) ReadDbTotals(string adapterName, DateTime startDate, DateTime endDate)
+    {
+        try
+        {
+            var dbPath = UsageDatabase.ResolveDatabasePath();
+            if (!File.Exists(dbPath))
+                return (0, 0);
+
+            var fromDate = startDate.Date;
+            var toDate = endDate.Date;
+            if (toDate < fromDate)
+                (fromDate, toDate) = (toDate, fromDate);
+
+            using var connection = UsageDatabase.OpenReadOnlyConnection(dbPath);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT SUM(pd.DataReceived) AS TotalRecv, SUM(pd.DataSent) AS TotalSent " +
+                "FROM ProcessDate pd " +
+                "JOIN Adapter a ON a.ID = pd.AdapterID " +
+                "JOIN Date d ON d.ID = pd.DateID " +
+                "WHERE a.Name = @AdapterName " +
+                "AND (d.Year * 10000 + d.Month * 100 + d.Day) BETWEEN @StartDate AND @EndDate";
+            command.Parameters.AddWithValue("@AdapterName", adapterName);
+            command.Parameters.AddWithValue("@StartDate", UsageDatabase.ToDateInt(fromDate));
+            command.Parameters.AddWithValue("@EndDate", UsageDatabase.ToDateInt(toDate));
+
+            using var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                var download = reader.IsDBNull(0) ? 0 : reader.GetInt64(0);
+                var upload = reader.IsDBNull(1) ? 0 : reader.GetInt64(1);
+                return (download, upload);
+            }
+        }
+        catch (Exception ex)
+        {
+            EventLogger.Error($"Failed to read summary totals from database for adapter '{adapterName}'", ex);
+        }
+
+        return (0, 0);
+    }
+
+    private DateTimeOffset NormalizeSinceDate(DateTimeOffset? value)
+    {
+        var candidate = (value ?? DateTimeOffset.Now.Date).Date;
+        if (candidate > DateMax)
+            candidate = DateMax;
+        if (candidate < DateMin)
+            candidate = DateMin;
+        return candidate;
+    }
+
+    private void ApplyProcessTick(Dictionary<string, PendingTraffic> pendingSnapshot)
+    {
+        var touched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kvp in pendingSnapshot)
+        {
+            touched.Add(kvp.Key);
+
+            if (!processIndex.TryGetValue(kvp.Key, out var row))
+            {
+                row = new SummaryProcessRowViewModel(
+                    kvp.Key,
+                    externalLinkService,
+                    fileRevealService,
+                    ShowStatusHint,
+                    processIconService.GetProcessIcon(kvp.Key) as IImage);
+                processIndex[kvp.Key] = row;
+                allProcesses.Add(row);
+            }
+
+            row.ApplyTick(kvp.Value.DownloadBytes, kvp.Value.UploadBytes);
+        }
+
+        foreach (var kvp in processIndex)
+        {
+            if (!touched.Contains(kvp.Key))
+                kvp.Value.ResetCurrent();
+        }
+
+        ApplyVisibleProcesses();
+    }
+
+    private static readonly Dictionary<string, Func<SummaryProcessRowViewModel, IComparable>> SortSelectors = new(StringComparer.Ordinal)
+    {
+        ["Name"] = p => p.ProcessName,
+        ["CurrentDownload"] = p => p.CurrentDownloadBytes,
+        ["CurrentUpload"] = p => p.CurrentUploadBytes,
+        ["TotalDownload"] = p => p.TotalDownloadBytes,
+        ["TotalUpload"] = p => p.TotalUploadBytes
+    };
+
+    private void SortProcesses(string column)
+    {
+        sortDescending = string.Equals(currentSortColumn, column, StringComparison.Ordinal) ? !sortDescending : false;
+        currentSortColumn = column;
+
+        NotifySortPropertiesChanged();
+        ApplyVisibleProcesses();
+    }
+
+    /// <summary>
+    /// 按“搜索词 → 显示范围（全部/前 N）→ 排序”重新计算可见列表，并以最小改动量更新到界面集合，
+    /// 避免每秒 Clear 造成闪烁或丢失滚动位置。
+    /// </summary>
+    private void ApplyVisibleProcesses()
+    {
+        IEnumerable<SummaryProcessRowViewModel> query = allProcesses;
+
+        if (processSearchText.Length > 0)
+        {
+            var needle = processSearchText;
+            query = query.Where(p => p.ProcessName.Contains(needle, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (Properties.SettingsManager.Current.ProcessDisplayMode == 1)
+        {
+            var limit = Math.Clamp(Properties.SettingsManager.Current.ProcessTopNCount, 1, 100);
+            query = query
+                .OrderByDescending(p => p.TotalDownloadBytes + p.TotalUploadBytes)
+                .ThenBy(p => p.ProcessName, StringComparer.OrdinalIgnoreCase)
+                .Take(limit);
+        }
+
+        if (currentSortColumn is { Length: > 0 } column)
+        {
+            var selector = SortSelectors.GetValueOrDefault(column, SortSelectors["Name"]);
+            query = sortDescending ? query.OrderByDescending(selector) : query.OrderBy(selector);
+        }
+
+        ApplyOrder(query.ToList());
+
+        OnPropertyChanged(nameof(ProcessCount));
+        OnPropertyChanged(nameof(ProcessCountText));
+    }
+
+    private void ApplyOrder(List<SummaryProcessRowViewModel> desired)
+    {
+        for (var i = ActiveProcesses.Count - 1; i >= 0; i--)
+        {
+            if (!desired.Contains(ActiveProcesses[i]))
+                ActiveProcesses.RemoveAt(i);
+        }
+
+        for (var i = 0; i < desired.Count; i++)
+        {
+            var item = desired[i];
+            var existing = ActiveProcesses.IndexOf(item);
+            if (existing < 0)
+                ActiveProcesses.Insert(i, item);
+            else if (existing != i)
+                ActiveProcesses.Move(existing, i);
+        }
+    }
+
+    /// <summary>设置页改变“显示范围/N”后由外壳调用。</summary>
+    public void RefreshDisplayScope()
+    {
+        OnPropertyChanged(nameof(IsTopNScope));
+        OnPropertyChanged(nameof(ScopeText));
+        ApplyVisibleProcesses();
+    }
+
+    private void ShowStatusHint(string text) => SetStatusHint(text);
+
+    private void SetStatusHint(string text)
+    {
+        if (statusHint == text)
+            return;
+
+        statusHint = text;
+        OnPropertyChanged(nameof(StatusHint));
+        OnPropertyChanged(nameof(HasStatusHint));
+
+        statusHintTimer.Stop();
+        if (text.Length > 0)
+            statusHintTimer.Start();
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        // 周趋势的日期标签是提前算好的，先按当前语言重算，再触发整体刷新。
+        WeeklyTrend.RefreshLabels();
+
+        // 空属性名 = 所有属性都需要刷新，把随语言变化的文案一次性推给界面。
+        OnPropertyChanged(string.Empty);
+    }
+
+    private void NotifySortPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(CurrentSortColumn));
+        OnPropertyChanged(nameof(IsSortDescending));
+    }
+
+    public void RefreshSpeedDisplayFormat()
+    {
+        speedHistory.NotifyDisplayFormatChanged();
+        OnPropertyChanged(nameof(DownloadSpeedText));
+        OnPropertyChanged(nameof(UploadSpeedText));
+    }
+
+
+    private void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private sealed class PendingTraffic
+    {
+        public long DownloadBytes;
+        public long UploadBytes;
+    }
+}
+
+public sealed class SummaryProcessRowViewModel : INotifyPropertyChanged
+{
+    private readonly IExternalLinkService externalLinkService;
+    private long currentDownloadBytes;
+    private long currentUploadBytes;
+    private long totalDownloadBytes;
+    private long totalUploadBytes;
+
+    public SummaryProcessRowViewModel(
+        string processName,
+        IExternalLinkService externalLinkService,
+        IFileRevealService fileRevealService,
+        Action<string>? notify = null,
+        IImage? icon = null)
+    {
+        ProcessName = processName;
+        this.externalLinkService = externalLinkService;
+        Icon = icon;
+
+        SearchProcessCommand = new RelayCommand(() =>
+        {
+            var encodedName = Uri.EscapeDataString(ProcessName);
+            externalLinkService.Open($"https://www.google.com/search?q={encodedName}");
+        });
+
+        OpenFileLocationCommand = new RelayCommand(() =>
+        {
+            var path = ProcessLocator.TryGetExecutablePath(ProcessName);
+            if (path is null)
+            {
+                notify?.Invoke(Loc.S("Sum.LocateFailed"));
+                return;
+            }
+
+            fileRevealService.Reveal(path);
+        });
+
+        CopyProcessNameCommand = new RelayCommand(async () =>
+        {
+            var copied = await ClipboardService.SetTextAsync(ProcessName);
+            notify?.Invoke(Loc.S(copied ? "Sum.Copied" : "Sum.CopyFailed"));
+        });
+    }
+
+    private bool isSelected;
+
+    public IImage? Icon { get; }
+    public string ProcessName { get; }
+    public ICommand SearchProcessCommand { get; }
+    public ICommand OpenFileLocationCommand { get; }
+    public ICommand CopyProcessNameCommand { get; }
+
+    /// <summary>是否为当前选中行；由 <see cref="SummaryViewModel.SelectProcess"/> 统一维护，保证同时只有一行选中。</summary>
+    public bool IsSelected
+    {
+        get => isSelected;
+        private set
+        {
+            if (isSelected == value)
+                return;
+
+            isSelected = value;
+            OnPropertyChanged(nameof(IsSelected));
+        }
+    }
+
+    internal void SetSelected(bool value) => IsSelected = value;
+    public long CurrentDownloadBytes => currentDownloadBytes;
+    public long CurrentUploadBytes => currentUploadBytes;
+    public long TotalDownloadBytes => totalDownloadBytes;
+    public long TotalUploadBytes => totalUploadBytes;
+
+    public string CurrentDownload => ByteSizeFormatter.FormatBytes(currentDownloadBytes);
+    public string CurrentUpload => ByteSizeFormatter.FormatBytes(currentUploadBytes);
+    public string TotalDownload => ByteSizeFormatter.FormatBytes(totalDownloadBytes);
+    public string TotalUpload => ByteSizeFormatter.FormatBytes(totalUploadBytes);
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void ApplyTick(long secondDownloadBytes, long secondUploadBytes)
+    {
+        currentDownloadBytes = secondDownloadBytes;
+        currentUploadBytes = secondUploadBytes;
+        totalDownloadBytes += secondDownloadBytes;
+        totalUploadBytes += secondUploadBytes;
+
+        OnPropertyChanged(nameof(CurrentDownloadBytes));
+        OnPropertyChanged(nameof(CurrentUploadBytes));
+        OnPropertyChanged(nameof(TotalDownloadBytes));
+        OnPropertyChanged(nameof(TotalUploadBytes));
+        OnPropertyChanged(nameof(CurrentDownload));
+        OnPropertyChanged(nameof(CurrentUpload));
+        OnPropertyChanged(nameof(TotalDownload));
+        OnPropertyChanged(nameof(TotalUpload));
+    }
+
+    public void ResetCurrent()
+    {
+        if (currentDownloadBytes == 0 && currentUploadBytes == 0)
+            return;
+
+        currentDownloadBytes = 0;
+        currentUploadBytes = 0;
+        OnPropertyChanged(nameof(CurrentDownloadBytes));
+        OnPropertyChanged(nameof(CurrentUploadBytes));
+        OnPropertyChanged(nameof(CurrentDownload));
+        OnPropertyChanged(nameof(CurrentUpload));
+    }
+
+    public void ApplyTraffic(long bytes, bool isReceive)
+    {
+        if (isReceive) // kept for compatibility with older call sites
+        {
+            currentDownloadBytes = bytes;
+            totalDownloadBytes += bytes;
+            OnPropertyChanged(nameof(CurrentDownloadBytes));
+            OnPropertyChanged(nameof(TotalDownloadBytes));
+            OnPropertyChanged(nameof(CurrentDownload));
+            OnPropertyChanged(nameof(TotalDownload));
+        }
+        else
+        {
+            currentUploadBytes = bytes;
+            totalUploadBytes += bytes;
+            OnPropertyChanged(nameof(CurrentUploadBytes));
+            OnPropertyChanged(nameof(TotalUploadBytes));
+            OnPropertyChanged(nameof(CurrentUpload));
+            OnPropertyChanged(nameof(TotalUpload));
+        }
+    }
+
+    private void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+

@@ -1,0 +1,136 @@
+using System;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
+using OpenNetMeter.Services;
+using OpenNetMeter.ViewModels;
+using OpenNetMeter.Views;
+using OpenNetMeter.PlatformAbstractions;
+using OpenNetMeter.Properties;
+using OpenNetMeter.Utilities;
+
+namespace OpenNetMeter;
+
+public partial class App : Application
+{
+    private static bool unhandledHandlersRegistered;
+
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        RegisterUnhandledExceptionLoggingOnce();
+        EventLogger.Info("Application starting");
+
+        // 语言必须在创建任何视图模型之前确定：视图模型在构造时就会取文案。
+        LocalizationService.Initialize(this);
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.ShutdownMode = global::Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
+            bool startMinimized = HasStartMinimizedArgument();
+
+            IMiniWidgetService miniWidgetService = new PlaceholderMiniWidgetService();
+            ITrayService trayService = new PlaceholderTrayService();
+            ITrayNotificationService trayNotificationService = new PlaceholderTrayNotificationService();
+
+            desktop.Exit += (_, _) =>
+            {
+                EventLogger.Info("Application exiting");
+                trayService.Dispose();
+                trayNotificationService.Dispose();
+                miniWidgetService.Dispose();
+                SettingsManager.Save();
+            };
+
+            var windowService = new AvaloniaWindowService();
+            IExternalLinkService externalLinkService = new ExternalLinkService();
+            IThemeService themeService = new AvaloniaThemeService(this);
+            IFileSaveDialogService fileSaveDialogService = new AvaloniaFileSaveDialogService();
+            IFileRevealService fileRevealService = new FileRevealService();
+            var miniWidgetViewModel = new MiniWidgetViewModel();
+            IStartupRegistrationService startupRegistrationService = OperatingSystem.IsWindows()
+                ? new WindowsStartupRegistrationService()
+                : new PlaceholderStartupRegistrationService();
+            INetworkCaptureService networkCaptureService = OperatingSystem.IsWindows()
+                ? new WindowsNetworkCaptureService()
+                : new PlaceholderNetworkCaptureService();
+            IProcessIconService processIconService = OperatingSystem.IsWindows()
+                ? new WindowsProcessIconService()
+                : new PlaceholderProcessIconService();
+            var mainWindow = new MainWindow();
+
+            miniWidgetService = OperatingSystem.IsWindows()
+                ? new WindowsMiniWidgetService(miniWidgetViewModel, mainWindow)
+                : new PlaceholderMiniWidgetService();
+
+            trayNotificationService = OperatingSystem.IsWindows()
+                ? new WindowsTrayNotificationService()
+                : new PlaceholderTrayNotificationService();
+
+            mainWindow.InitializeWindowState(miniWidgetService, trayNotificationService);
+
+            // 剪贴板挂在 TopLevel 上，视图模型拿不到；把主窗口的写入能力注册到静态入口。
+            ClipboardService.Register(text => mainWindow.Clipboard?.SetTextAsync(text) ?? Task.CompletedTask);
+            mainWindow.DataContext = new MainWindowViewModel(windowService, networkCaptureService, processIconService, externalLinkService, miniWidgetViewModel, miniWidgetService, startupRegistrationService, themeService, fileSaveDialogService, fileRevealService);
+            if (startMinimized)
+            {
+                // The desktop lifetime shows MainWindow once startup completes, which would undo a Hide()
+                // here. Assign it after startup instead so the app starts in the tray; the tray icon shows it.
+                Dispatcher.UIThread.Post(() => desktop.MainWindow = mainWindow);
+            }
+            else
+            {
+                desktop.MainWindow = mainWindow;
+            }
+
+            trayService = OperatingSystem.IsWindows()
+                ? new WindowsTrayService(this, desktop, mainWindow, miniWidgetService)
+                : new PlaceholderTrayService();
+
+            if (OperatingSystem.IsWindows() && SettingsManager.Current.MiniWidgetVisibility)
+                miniWidgetService.Show();
+
+            // A second launch (shortcut, Start menu) exits and asks this copy to show its window instead.
+            Program.InstanceGuard?.ListenForActivation(() => Dispatcher.UIThread.Post(mainWindow.OpenFromTray));
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void RegisterUnhandledExceptionLoggingOnce()
+    {
+        if (unhandledHandlersRegistered)
+            return;
+
+        unhandledHandlersRegistered = true;
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                EventLogger.Error("Unhandled exception", ex);
+            }
+            else
+            {
+                EventLogger.Error($"Unhandled exception object: {e.ExceptionObject}");
+            }
+        };
+    }
+
+    private static bool HasStartMinimizedArgument()
+    {
+        foreach (string arg in Environment.GetCommandLineArgs())
+        {
+            if (string.Equals(arg, "/StartMinimized", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+}

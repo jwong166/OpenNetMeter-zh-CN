@@ -1,0 +1,84 @@
+name: Build and Test / Draft MSI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: windows-latest
+    name: Build and Test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore .\OpenNetMeter.Tests\OpenNetMeter.Tests.csproj
+
+      - name: Build
+        run: dotnet build .\OpenNetMeter.Tests\OpenNetMeter.Tests.csproj --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test .\OpenNetMeter.Tests\OpenNetMeter.Tests.csproj --no-build --configuration Release
+
+  draft-msi:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Avalonia MSI
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\build-avalonia-msi.ps1 -Runtime win-x64 -Configuration Release
+
+      - name: Find built MSI
+        id: find_msi
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem `
+            "$Env:GITHUB_WORKSPACE\Installer\bin" `
+            -Filter 'OpenNetMeter-*.msi' `
+            -Recurse `
+            | Sort-Object LastWriteTimeUtc -Descending `
+            | Select-Object -First 1
+          if (-not $msi) { throw 'No MSI found after build.' }
+
+          "msi_path=$($msi.FullName)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Create or Update Draft Release and Upload MSI
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: opennetmeter-draft
+          name: OpenNetMeter (Draft Release)
+          draft: true
+          allowUpdates: true
+          artifacts: ${{ steps.find_msi.outputs.msi_path }}
+
+      - name: Echo MSI path
+        shell: pwsh
+        env:
+          MSI_PATH: ${{ steps.find_msi.outputs.msi_path }}
+        run: |
+          Write-Host "Built MSI path was: $Env:MSI_PATH"

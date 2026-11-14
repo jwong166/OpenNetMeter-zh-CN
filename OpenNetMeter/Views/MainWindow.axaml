@@ -1,0 +1,541 @@
+<!-- 简体中文汉化修改：本文件的用户界面文案已译为简体中文，其余布局与官方版本一致。 -->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:OpenNetMeter.ViewModels"
+        xmlns:tabs="clr-namespace:OpenNetMeter.Views.MainWindowTabs"
+        x:Class="OpenNetMeter.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="800"
+        Height="580"
+        MinWidth="800"
+        MinHeight="580"
+        Title="OpenNetMeter"
+        Icon="avares://OpenNetMeter/Assets/x48.png"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="0"
+        SystemDecorations="None"
+        Background="{DynamicResource BrushTransparent}"
+        TransparencyLevelHint="None">
+  <Design.DataContext>
+    <vm:MainWindowViewModel/>
+  </Design.DataContext>
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseAboutCommand}"/>
+  </Window.KeyBindings>
+
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://OpenNetMeter/Views/Themes.axaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Grid>
+    <!-- Disabled while a dialog is open so Tab/arrow keys can't reach anything behind the overlay. -->
+    <Border Background="{DynamicResource BrushBgWindow}" BorderBrush="{DynamicResource BrushBorderMain}" BorderThickness="1" CornerRadius="0"
+            IsEnabled="{Binding !IsModalOpen}">
+      <Grid RowDefinitions="50,*,30">
+
+        <Border Grid.Row="0" Background="{DynamicResource BrushBgTitleBar}" IsHitTestVisible="True">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+
+            <Image Grid.Column="0" Source="avares://OpenNetMeter/Assets/x48.png"
+                   Width="28" Height="28" Margin="14,0,0,0"
+                   VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1" Content="{DynamicResource Tab.Summary}" Classes="tab"
+                    Classes.active="{Binding IsSummaryTab}"
+                    Command="{Binding SwitchTabCommand}" CommandParameter="0"
+                    Margin="16,0,4,0"/>
+            <Button Grid.Column="2" Content="{DynamicResource Tab.History}" Classes="tab"
+                    Classes.active="{Binding IsHistoryTab}"
+                    Command="{Binding SwitchTabCommand}" CommandParameter="1"
+                    Margin="0,0,4,0"/>
+            <Button Grid.Column="3" Content="{DynamicResource Tab.Settings}" Classes="tab"
+                    Classes.active="{Binding IsSettingsTab}"
+                    Command="{Binding SwitchTabCommand}" CommandParameter="2"/>
+
+            <Border Grid.Column="4" Background="{DynamicResource BrushTransparent}" IsHitTestVisible="True"
+                    PointerPressed="TitleBar_PointerPressed"/>
+
+            <Button Grid.Column="5" Content="{DynamicResource Tab.About}" Classes="titleBtn"
+                    Command="{Binding AboutCommand}"/>
+
+            <Button Grid.Column="6" Classes="titleBtn" Command="{Binding MinimizeWindowCommand}">
+              <Panel Width="10" Height="1">
+                <Rectangle Fill="{DynamicResource BrushTextUi}" Height="1"/>
+              </Panel>
+            </Button>
+
+            <Button Grid.Column="7" Classes="titleBtn closeBtn" Command="{Binding CloseWindowCommand}">
+              <Panel Width="10" Height="10">
+                <Line StartPoint="0,0" EndPoint="10,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                <Line StartPoint="10,0" EndPoint="0,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+              </Panel>
+            </Button>
+          </Grid>
+        </Border>
+
+        <TabControl Grid.Row="1"
+                    SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+                    Margin="0"
+                    Padding="0">
+          <TabControl.Styles>
+            <Style Selector="TabControl /template/ ItemsPresenter#PART_ItemsPresenter">
+              <Setter Property="IsVisible" Value="False"/>
+            </Style>
+          </TabControl.Styles>
+
+          <TabItem>
+            <tabs:SummaryView DataContext="{Binding Summary}"/>
+          </TabItem>
+
+          <TabItem>
+            <tabs:HistoryView DataContext="{Binding History}"/>
+          </TabItem>
+
+          <TabItem>
+            <tabs:SettingsView DataContext="{Binding Settings}"/>
+          </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="2" Background="{DynamicResource BrushBgTitleBar}" BorderBrush="{DynamicResource BrushBorderMain}" BorderThickness="0,1,0,0">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="10,0">
+            <Grid Grid.Column="0" ColumnDefinitions="Auto,Auto,Auto,*">
+              <Ellipse Grid.Column="0" Classes="statusDot" Classes.online="{Binding IsNetworkConnected}"
+                       Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0"
+                       ToolTip.Tip="{Binding NetworkStatusTooltip}"/>
+              <TextBlock Grid.Column="1" Text="{Binding NetworkStatus}" FontSize="12"
+                         Foreground="{DynamicResource BrushTextUi}" VerticalAlignment="Center"/>
+              <PathIcon Grid.Column="2" Width="12" Height="12" Margin="10,0,6,0" VerticalAlignment="Center"
+                        Data="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"
+                        Foreground="{DynamicResource BrushWarning}"
+                        IsVisible="{Binding HasPinnedAdapterWarning}"/>
+              <TextBlock Grid.Column="3" Text="{Binding PinnedAdapterWarning}" FontSize="12"
+                         Foreground="{DynamicResource BrushWarning}" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding PinnedAdapterWarning}"
+                         IsVisible="{Binding HasPinnedAdapterWarning}"/>
+            </Grid>
+
+            <TextBlock Grid.Column="1" Text="{DynamicResource Main.DownloadSpeed}" FontSize="12"
+                       Foreground="{DynamicResource BrushTextSecondaryAlt}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="2" FontSize="12" Foreground="{DynamicResource BrushTextUi}"
+                       VerticalAlignment="Center" Margin="0,0,16,0"
+                       Text="{Binding Summary.DownloadSpeedText}"/>
+
+            <TextBlock Grid.Column="3" Text="{DynamicResource Main.UploadSpeed}" FontSize="12"
+                       Foreground="{DynamicResource BrushTextSecondaryAlt}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="4" FontSize="12" Foreground="{DynamicResource BrushTextUi}"
+                       VerticalAlignment="Center"
+                       Text="{Binding Summary.UploadSpeedText}"/>
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="6" Background="{DynamicResource BrushTransparent}"
+            Cursor="SizeNorthSouth" PointerPressed="ResizeTop_PointerPressed"/>
+    <Border HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="6" Background="{DynamicResource BrushTransparent}"
+            Cursor="SizeNorthSouth" PointerPressed="ResizeBottom_PointerPressed"/>
+    <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="6" Background="{DynamicResource BrushTransparent}"
+            Cursor="SizeWestEast" PointerPressed="ResizeLeft_PointerPressed"/>
+    <Border HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="6" Background="{DynamicResource BrushTransparent}"
+            Cursor="SizeWestEast" PointerPressed="ResizeRight_PointerPressed"/>
+
+    <Border HorizontalAlignment="Left" VerticalAlignment="Top" Width="10" Height="10" Background="{DynamicResource BrushTransparent}"
+            Cursor="TopLeftCorner" PointerPressed="ResizeTopLeft_PointerPressed"/>
+    <Border HorizontalAlignment="Right" VerticalAlignment="Top" Width="10" Height="10" Background="{DynamicResource BrushTransparent}"
+            Cursor="TopRightCorner" PointerPressed="ResizeTopRight_PointerPressed"/>
+    <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="10" Height="10" Background="{DynamicResource BrushTransparent}"
+            Cursor="BottomLeftCorner" PointerPressed="ResizeBottomLeft_PointerPressed"/>
+    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="10" Height="10" Background="{DynamicResource BrushTransparent}"
+            Cursor="BottomRightCorner" PointerPressed="ResizeBottomRight_PointerPressed"/>
+
+    <Border x:Name="AboutOverlay" IsVisible="{Binding IsAboutOpen}"
+            KeyboardNavigation.TabNavigation="Cycle"
+            Background="{DynamicResource BrushOverlayScrim}">
+      <Grid>
+        <Border Width="360" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BorderBrush="{DynamicResource BrushBorderMain}" BorderThickness="1"
+                Background="{DynamicResource BrushBgWindow}">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0" Background="{DynamicResource BrushBgTitleBar}">
+              <Grid ColumnDefinitions="*,Auto" Margin="12,0,0,10">
+                <StackPanel Grid.Column="0" Margin="0,10,0,0" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                  <Image Source="avares://OpenNetMeter/Assets/x48.png"
+                         Width="48" Height="48"/>
+                  <TextBlock Text="OpenNetMeter" FontSize="30" FontWeight="Bold"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                </StackPanel>
+
+                <Button x:Name="AboutCloseButton" Grid.Column="1" Classes="titleBtn closeBtn" HorizontalAlignment="Right" Command="{Binding CloseAboutCommand}">
+                  <Panel Width="10" Height="10">
+                    <Line StartPoint="0,0" EndPoint="10,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                    <Line StartPoint="10,0" EndPoint="0,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                  </Panel>
+                </Button>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="{DynamicResource BrushBgSubtle}" Padding="10">
+              <Border BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1"
+                      Background="{DynamicResource BrushBgSurface}" Padding="12">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="{Binding AboutVersionText}"
+                             FontSize="{DynamicResource FontSizeMd}"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                  <TextBlock TextWrapping="Wrap"
+                             Text="{DynamicResource About.Author}"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                  <TextBlock TextWrapping="Wrap"
+                             Text="{DynamicResource About.Issues}"
+                             Foreground="{DynamicResource BrushTextPrimary}"/>
+                  <Button Classes="linkBtn"
+                          Command="{Binding OpenAboutRepositoryCommand}"
+                          HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding AboutRepositoryUrl}"
+                               Foreground="{DynamicResource BrushLink}"
+                               TextDecorations="Underline"/>
+                  </Button>
+                </StackPanel>
+              </Border>
+            </Border>
+
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border x:Name="ConfirmationOverlay" IsVisible="{Binding Settings.IsConfirmationOpen}"
+            KeyboardNavigation.TabNavigation="Cycle"
+            Background="{DynamicResource BrushOverlayScrim}">
+      <Border.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding Settings.CancelConfirmationCommand}"/>
+      </Border.KeyBindings>
+      <Grid>
+        <Border Width="360" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BorderBrush="{DynamicResource BrushBorderMain}" BorderThickness="1"
+                Background="{DynamicResource BrushBgWindow}">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0" Background="{DynamicResource BrushBgTitleBar}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{DynamicResource Common.Confirm}" VerticalAlignment="Center"
+                           Margin="15,0" Foreground="{DynamicResource BrushTextPrimary}"/>
+
+                <Button Grid.Column="1" Classes="titleBtn closeBtn" HorizontalAlignment="Right"
+                        Command="{Binding Settings.CancelConfirmationCommand}">
+                  <Panel Width="10" Height="10">
+                    <Line StartPoint="0,0" EndPoint="10,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                    <Line StartPoint="10,0" EndPoint="0,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                  </Panel>
+                </Button>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="{DynamicResource BrushBgSubtle}" Padding="20,10,20,20">
+              <StackPanel Spacing="20">
+                <TextBlock Text="{Binding Settings.ConfirmationMessage}"
+                           Foreground="{DynamicResource BrushTextPrimary}"
+                           TextWrapping="Wrap"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                  <Button MinWidth="60" Padding="16,8" Command="{Binding Settings.ConfirmCommand}">
+                    <TextBlock Text="{DynamicResource Common.Yes}" HorizontalAlignment="Center"/>
+                  </Button>
+                  <Button x:Name="ConfirmNoButton" MinWidth="60" Padding="16,8" Command="{Binding Settings.CancelConfirmationCommand}">
+                    <TextBlock Text="{DynamicResource Common.No}" HorizontalAlignment="Center"/>
+                  </Button>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border x:Name="RecordingResultsOverlay" IsVisible="{Binding Summary.IsRecordingResultsOpen}"
+            KeyboardNavigation.TabNavigation="Cycle"
+            Background="{DynamicResource BrushOverlayScrim}">
+      <Border.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding Summary.CloseRecordingResultsCommand}"/>
+      </Border.KeyBindings>
+      <Grid>
+        <Border Width="520" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BorderBrush="{DynamicResource BrushBorderMain}" BorderThickness="1"
+                Background="{DynamicResource BrushBgWindow}">
+          <Grid RowDefinitions="Auto,*">
+
+            <Border Grid.Row="0" Background="{DynamicResource BrushBgTitleBar}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{DynamicResource Recording.Title}" VerticalAlignment="Center"
+                           Margin="15,0" Foreground="{DynamicResource BrushTextPrimary}"/>
+
+                <Button x:Name="RecordingResultsCloseButton" Grid.Column="1" Classes="titleBtn closeBtn" HorizontalAlignment="Right"
+                        Command="{Binding Summary.CloseRecordingResultsCommand}">
+                  <Panel Width="10" Height="10">
+                    <Line StartPoint="0,0" EndPoint="10,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                    <Line StartPoint="10,0" EndPoint="0,10" Stroke="{DynamicResource BrushTextUi}" StrokeThickness="1.2"/>
+                  </Panel>
+                </Button>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="{DynamicResource BrushBgSubtle}" Padding="16,12,16,16">
+              <Grid RowDefinitions="Auto,Auto">
+
+                <!-- Body: bound to the recording's results. The title bar and the buttons row stay on the window's view model. -->
+                <Border Grid.Row="0" DataContext="{Binding Summary.LastRecordingResults}" x:DataType="vm:RecordingResultsViewModel">
+                  <StackPanel Spacing="10">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource BrushTextMuted}">
+                      <Run Text="{Binding StartedText}"/>
+                      <Run Text=" &#x2192; "/>
+                      <Run Text="{Binding EndedText}"/>
+                      <Run Text=" &#xB7; "/>
+                      <Run Text="{Binding DurationText}"/>
+                      <Run Text=" &#xB7; "/>
+                      <Run Text="{Binding AdaptersText}"/>
+                    </TextBlock>
+
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                      <TextBlock FontSize="{DynamicResource FontSizeLg}" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource BrushDownload}">
+                        <Run Text="&#x2193; "/>
+                        <Run Text="{Binding TotalDownloadText}"/>
+                      </TextBlock>
+                      <TextBlock FontSize="{DynamicResource FontSizeLg}" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource BrushUpload}">
+                        <Run Text="&#x2191; "/>
+                        <Run Text="{Binding TotalUploadText}"/>
+                      </TextBlock>
+                    </StackPanel>
+
+                    <Border CornerRadius="8" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True">
+                      <Grid RowDefinitions="Auto,Auto">
+                        <Border Grid.Row="0" Padding="12,8" Background="{DynamicResource BrushHeaderRow}"
+                                BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+                          <Grid ColumnDefinitions="3*,1.5*,1.5*">
+                            <TextBlock Text="{DynamicResource Col.Process}" Foreground="{DynamicResource BrushTextHeader}"
+                                       FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource Col.Download}" Foreground="{DynamicResource BrushTextHeader}"
+                                       FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Col.Upload}" Foreground="{DynamicResource BrushTextHeader}"
+                                       FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                          </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" MaxHeight="260" Margin="0,0,0,6" IsVisible="{Binding HasRows}">
+                          <ItemsControl ItemsSource="{Binding Rows}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:HistoryRowViewModel">
+                                <Grid ColumnDefinitions="3*,1.5*,1.5*" Margin="10,4">
+                                  <Grid ColumnDefinitions="Auto,Auto,*" MinWidth="0">
+                                    <Button Command="{Binding SearchProcessCommand}"
+                                            Background="Transparent" BorderThickness="0"
+                                            Padding="2" Cursor="Hand"
+                                            ToolTip.Tip="{DynamicResource Tip.SearchOnline}">
+                                      <PathIcon Data="{DynamicResource IconSearch}"
+                                                Width="12" Height="12"
+                                                Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    </Button>
+                                    <Image Grid.Column="1" Source="{Binding Icon}" Width="16" Height="16" Margin="4,0,0,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding ProcessName}"
+                                               Foreground="{DynamicResource BrushTextBody}"
+                                               FontSize="11" TextTrimming="CharacterEllipsis"
+                                               MinWidth="0" VerticalAlignment="Center" Margin="4,0,0,0"
+                                               ToolTip.Tip="{Binding ProcessName}"/>
+                                  </Grid>
+                                  <TextBlock Grid.Column="1" Text="{Binding DownloadText}"
+                                             Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Center"/>
+                                  <TextBlock Grid.Column="2" Text="{Binding UploadText}"
+                                             Foreground="{DynamicResource BrushTextBody}" FontSize="11" VerticalAlignment="Center"/>
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </ScrollViewer>
+
+                        <TextBlock Grid.Row="1" Text="{DynamicResource Recording.Empty}" Margin="12,10"
+                                   Foreground="{DynamicResource BrushTextMuted}"
+                                   IsVisible="{Binding !HasRows}"/>
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+                </Border>
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,12,0,0">
+                  <Border Grid.Column="0" VerticalAlignment="Center"
+                          DataContext="{Binding Summary.LastRecordingResults}" x:DataType="vm:RecordingResultsViewModel">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6"
+                          IsVisible="{Binding ExportStatus.IsVisible}">
+                      <Panel Grid.Column="0" VerticalAlignment="Center">
+                        <PathIcon Width="11" Height="11"
+                                  Data="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"
+                                  Foreground="{DynamicResource BrushDownload}"
+                                  IsVisible="{Binding ExportStatus.IsSuccess}"/>
+                        <PathIcon Width="11" Height="11"
+                                  Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                                  Foreground="{DynamicResource BrushDangerBright}"
+                                  IsVisible="{Binding ExportStatus.IsError}"/>
+                      </Panel>
+                      <TextBlock Grid.Column="1" Text="{Binding ExportStatus.Message}" FontSize="10" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource BrushTextSecondaryAlt}"/>
+                      <TextBlock Grid.Column="2" Text="{Binding ExportStatus.FileName}" FontSize="10" VerticalAlignment="Center"
+                                 TextTrimming="PrefixCharacterEllipsis"
+                                 Foreground="{DynamicResource BrushTextSecondaryAlt}"
+                                 ToolTip.Tip="{Binding ExportStatus.FilePath}"/>
+                      <Button Grid.Column="3" Classes="linkBtn" VerticalAlignment="Center"
+                              Command="{Binding ExportStatus.RevealCommand}"
+                              IsVisible="{Binding ExportStatus.CanReveal}">
+                        <TextBlock Text="{DynamicResource Common.OpenFolder}" FontSize="10" Foreground="{DynamicResource BrushLink}" TextDecorations="Underline"/>
+                      </Button>
+                    </Grid>
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button MinWidth="80" Padding="16,6" CornerRadius="6" HorizontalContentAlignment="Center"
+                            Command="{Binding Summary.LastRecordingResults.ExportCommand}"
+                            ToolTip.Tip="{DynamicResource Recording.ExportTip}"
+                            Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}"
+                            BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                      <TextBlock Text="{DynamicResource Common.Export}"/>
+                    </Button>
+                    <Button MinWidth="80" Padding="16,6" CornerRadius="6" HorizontalContentAlignment="Center"
+                            Command="{Binding Summary.CloseRecordingResultsCommand}"
+                            Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}"
+                            BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                      <TextBlock Text="{DynamicResource Common.Close}"/>
+                    </Button>
+                  </StackPanel>
+                </Grid>
+
+              </Grid>
+            </Border>
+
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
+  </Grid>
+
+  <Window.Styles>
+    <Style Selector="TextBlock">
+      <Setter Property="FontSize" Value="{DynamicResource FontSizeSm}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="FontSize" Value="{DynamicResource FontSizeSm}"/>
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="FontSize" Value="{DynamicResource FontSizeSm}"/>
+    </Style>
+    <StyleInclude Source="avares://OpenNetMeter/Views/Styles/DatePickerStyles.axaml"/>
+
+    <Style Selector="Ellipse.statusDot">
+      <Setter Property="Fill" Value="{DynamicResource BrushTextMuted}"/>
+    </Style>
+    <Style Selector="Ellipse.statusDot.online">
+      <Setter Property="Fill" Value="{DynamicResource BrushDownload}"/>
+    </Style>
+
+    <Style Selector="Button.tab">
+      <Setter Property="Background" Value="{DynamicResource BrushTransparent}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+      <Setter Property="FontSize" Value="{DynamicResource FontSizeLg}"/>
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="BorderThickness" Value="0,0,0,3"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushTransparent}"/>
+      <Setter Property="VerticalAlignment" Value="Bottom"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.tab /template/ ContentPresenter">
+      <Setter Property="BorderThickness" Value="0,0,0,3"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushTransparent}"/>
+    </Style>
+    <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BrushBgSurfaceHover}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+    </Style>
+    <Style Selector="Button.tab.active">
+      <Setter Property="Foreground" Value="{DynamicResource BrushTabActiveText}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentGreen}"/>
+    </Style>
+    <Style Selector="Button.tab.active /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource BrushTabActiveText}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentGreen}"/>
+    </Style>
+
+    <Style Selector="Button.titleBtn">
+      <Setter Property="Background" Value="{DynamicResource BrushTransparent}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
+      <Setter Property="Width" Value="50"/>
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="VerticalAlignment" Value="Top"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="Button.titleBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BrushBgSurfaceHover}"/>
+    </Style>
+    <Style Selector="Button.closeBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BrushDanger}"/>
+    </Style>
+    <Style Selector="Button.linkBtn">
+      <Setter Property="Background" Value="{DynamicResource BrushTransparent}"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="Button.linkBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BrushTransparent}"/>
+      <Setter Property="Opacity" Value="0.85"/>
+    </Style>
+
+    <Style Selector="RadioButton.pill">
+      <Setter Property="Background" Value="{DynamicResource BrushBgSubtle}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="12,4"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderSubtle}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="RadioButton.pill:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BrushBorderMain}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentBlue}"/>
+    </Style>
+    <Style Selector="RadioButton.pill:checked">
+      <Setter Property="Background" Value="{DynamicResource BrushPillCheckedBg}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentBlue}"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrushAccentBlue}"/>
+    </Style>
+    <Style Selector="RadioButton.pill:checked /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource BrushAccentBlue}"/>
+    </Style>
+  </Window.Styles>
+</Window>

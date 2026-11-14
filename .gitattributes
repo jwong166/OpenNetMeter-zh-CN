@@ -1,0 +1,25 @@
+# 统一换行与二进制识别，避免 Windows/Linux 协作时出现整文件 diff
+* text=auto
+
+*.cs        text
+*.axaml     text
+*.xaml      text
+*.csproj    text
+*.props     text
+*.targets   text
+*.wxs       text
+*.wxl       text
+*.json      text
+*.yml       text
+*.md        text eol=lf
+*.sln       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+*.png       binary
+*.ico       binary
+*.exe       binary
+*.dll       binary
+*.msi       binary
+*.pdb       binary
+*.sqlite    binary

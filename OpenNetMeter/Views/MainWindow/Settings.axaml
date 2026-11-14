@@ -1,0 +1,432 @@
+<!-- 简体中文汉化修改：本文件的用户界面文案已译为简体中文，其余布局与官方版本一致。 -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:OpenNetMeter.ViewModels"
+             x:Class="OpenNetMeter.Views.MainWindowTabs.SettingsView"
+             x:DataType="vm:SettingsViewModel"
+             mc:Ignorable="d">
+  <ScrollViewer Margin="12,8">
+    <StackPanel Spacing="12">
+      <Grid ColumnDefinitions="*,12,*">
+        <Border Grid.Column="0" CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+                BoxShadow="{DynamicResource ShadowSoft}" VerticalAlignment="Stretch">
+          <StackPanel>
+            <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushDownload}">
+                  <PathIcon Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.04 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"
+                            Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+                </Border>
+                <TextBlock Text="{DynamicResource Set.General}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+            <StackPanel Margin="20,16" Spacing="0">
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.StartWithWin}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.StartWithWinDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithWindows, Mode=TwoWay}"
+                              VerticalAlignment="Center" OnContent="" OffContent="" Margin="0,0,-8,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.MinimizeTray}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.MinimizeTrayDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding MinimizeOnStart, Mode=TwoWay}"
+                              IsEnabled="{Binding CanChangeMinimizeOnStart}"
+                              VerticalAlignment="Center" OnContent="" OffContent="" Margin="0,0,-8,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.DarkMode}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.DarkModeDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding DarkMode, Mode=TwoWay}"
+                              VerticalAlignment="Center" OnContent="" OffContent="" Margin="0,0,-8,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.Language}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.LanguageDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="132" VerticalAlignment="Center"
+                          ItemsSource="{Binding LanguageNames}"
+                          SelectedIndex="{Binding SelectedLanguageIndex, Mode=TwoWay}"/>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="2" CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+                BoxShadow="{DynamicResource ShadowSoft}" VerticalAlignment="Stretch">
+          <StackPanel>
+            <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushUpload}">
+                  <PathIcon Data="M21,17H7V3H21M21,1H7A2,2 0 0,0 5,3V17A2,2 0 0,0 7,19H21A2,2 0 0,0 23,17V3A2,2 0 0,0 21,1M3,5H1V21A2,2 0 0,0 3,23H19V21H3V5Z"
+                            Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+                </Border>
+                <TextBlock Text="{DynamicResource Set.Widget}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+            <StackPanel Margin="20,16" Spacing="0">
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.WidgetShow}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.WidgetShowDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding MiniWidgetVisible, Mode=TwoWay}"
+                              VerticalAlignment="Center" OnContent="" OffContent="" Margin="0,0,-8,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.WidgetAutoHide}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.WidgetAutoHideDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding MiniWidgetAutoHideFullscreen, Mode=TwoWay}"
+                              IsEnabled="{Binding MiniWidgetVisible}"
+                              VerticalAlignment="Center" OnContent="" OffContent="" Margin="0,0,-8,0"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid Margin="0,0,0,8">
+                <TextBlock Text="{DynamicResource Set.Transparency}" Foreground="{DynamicResource BrushTextBody}" FontSize="12" VerticalAlignment="Top"/>
+                <Border VerticalAlignment="Top" HorizontalAlignment="Right" CornerRadius="4" Padding="8,3" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+                  <TextBlock Foreground="{DynamicResource BrushTextSecondaryAlt}" FontSize="11" FontFamily="Consolas,monospace">
+                    <Run Text="{Binding MiniWidgetTransparency}"/><Run Text="%"/>
+                  </TextBlock>
+                </Border>
+                <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding MiniWidgetTransparency, Mode=TwoWay}"
+                        IsEnabled="{Binding MiniWidgetVisible}" Margin="0,6,0,2" VerticalAlignment="Center"/>
+                <Grid VerticalAlignment="Bottom">
+                  <TextBlock HorizontalAlignment="Left" Text="{DynamicResource Set.Opaque}" Foreground="{DynamicResource BrushTextFaint}" FontSize="9"/>
+                  <TextBlock HorizontalAlignment="Right" Text="{DynamicResource Set.Transparent}" Foreground="{DynamicResource BrushTextFaint}" FontSize="9"/>
+                </Grid>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,8,0,8"/>
+              <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="{DynamicResource Set.WidgetTextColor}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.WidgetTextColorDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="118" VerticalAlignment="Center"
+                          ItemsSource="{Binding MiniWidgetTextColors}"
+                          SelectedIndex="{Binding SelectedMiniWidgetTextColorIndex, Mode=TwoWay}"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{DynamicResource Set.WidgetLocateDesc}"
+                           Foreground="{DynamicResource BrushTextMuted}" FontSize="10" TextWrapping="Wrap"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" VerticalAlignment="Center" Padding="10,5" CornerRadius="6"
+                        Command="{Binding RevealWidgetCommand}"
+                        Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}"
+                        BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                  <TextBlock Text="{DynamicResource Set.WidgetLocate}" FontSize="10"/>
+                </Button>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <Border CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+              BoxShadow="{DynamicResource ShadowSoft}">
+        <StackPanel>
+          <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushAccentGreen}">
+                <PathIcon Data="{DynamicResource IconChartLine}" Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+              </Border>
+              <TextBlock Text="{DynamicResource Set.ScopeCard}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto" Margin="20,16">
+            <TextBlock Grid.Column="0" Text="{DynamicResource Set.ScopeCardDesc}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrushTextMuted}" FontSize="10"
+                       VerticalAlignment="Center" Margin="0,0,16,0"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+              <ComboBox Width="152" VerticalAlignment="Center" ItemsSource="{Binding ProcessScopeOptions}"
+                        SelectedIndex="{Binding SelectedProcessScopeIndex, Mode=TwoWay}"/>
+              <StackPanel Spacing="6" IsVisible="{Binding IsTopNSelected}">
+                <TextBlock Text="{DynamicResource Set.TopN}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10"/>
+                <NumericUpDown x:Name="TopNBox" Width="118" Minimum="1" Maximum="100" Increment="1" FormatString="0"
+                               Value="{Binding ProcessTopNValue, Mode=TwoWay}"/>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+              BoxShadow="{DynamicResource ShadowSoft}">
+        <StackPanel>
+          <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushWarning}">
+                <PathIcon Data="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M4,12C4,11.39 4.08,10.79 4.21,10.22L8,14V15C8,16.1 8.9,17 10,17V19.93C6.61,19.44 4,16.07 4,12M17.9,17.39C17.64,16.58 16.9,16 16,16H15V13C15,12.45 14.55,12 14,12H8V10H10C10.55,10 11,9.55 11,9V7H13C14.1,7 15,6.1 15,5V4.59C17.93,5.77 20,8.64 20,12C20,14.08 19.2,15.97 17.9,17.39Z"
+                          Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+              </Border>
+              <TextBlock Text="{DynamicResource Set.Monitoring}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <StackPanel Margin="20,16" Spacing="0">
+            <Grid ColumnDefinitions="*,Auto,*">
+              <StackPanel Grid.Column="0" Spacing="0" VerticalAlignment="Top">
+                <TextBlock Text="{DynamicResource Set.Adapter}" Foreground="{DynamicResource BrushTextBody}" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Text="{DynamicResource Set.AdapterDesc}"
+                           Foreground="{DynamicResource BrushTextMuted}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                <ComboBox HorizontalAlignment="Left" MinWidth="260"
+                          ItemsSource="{Binding AdapterChoices}"
+                          SelectedItem="{Binding SelectedAdapterChoice, Mode=TwoWay}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AdapterChoice">
+                      <TextBlock Text="{Binding Label}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,8,0,0"
+                      IsVisible="{Binding IsPinnedAdapterMissing}">
+                  <PathIcon Grid.Column="0" Width="11" Height="11" VerticalAlignment="Top" Margin="0,1,0,0"
+                            Data="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"
+                            Foreground="{DynamicResource BrushWarning}"/>
+                  <TextBlock Grid.Column="1" Text="{DynamicResource Set.AdapterMissing}"
+                             FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource BrushWarning}"/>
+                </Grid>
+              </StackPanel>
+              <Border Grid.Column="1" Width="1" Background="{DynamicResource BrushDivider}" Margin="24,0"/>
+              <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Top">
+                <TextBlock Text="{DynamicResource Set.Target}" Foreground="{DynamicResource BrushTextBody}" FontSize="12" Margin="0,0,0,4"/>
+                <TextBlock Text="{DynamicResource Set.TargetDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,0,0,14"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                  <RadioButton GroupName="NetTarget" Classes="pill"
+                               IsChecked="{Binding IsNetworkTargetPrivate, Mode=TwoWay}">
+                    <TextBlock Text="{DynamicResource Set.Private}"/>
+                  </RadioButton>
+                  <RadioButton GroupName="NetTarget" Classes="pill"
+                               IsChecked="{Binding IsNetworkTargetPublic, Mode=TwoWay}">
+                    <TextBlock Text="{DynamicResource Set.Public}"/>
+                  </RadioButton>
+                  <RadioButton GroupName="NetTarget" Classes="pill"
+                               IsChecked="{Binding IsNetworkTargetBoth, Mode=TwoWay}">
+                    <TextBlock Text="{DynamicResource Set.Both}"/>
+                  </RadioButton>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+            <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,16"/>
+            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="32" HorizontalAlignment="Left">
+              <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource Set.Format}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                <TextBlock Text="{DynamicResource Set.FormatDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{DynamicResource Set.Magnitude}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10"/>
+                  <ComboBox Width="120" ItemsSource="{Binding SpeedMagnitudes}"
+                            SelectedIndex="{Binding SelectedSpeedMagnitudeIndex, Mode=TwoWay}"/>
+                </StackPanel>
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{DynamicResource Set.Unit}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10"/>
+                  <ComboBox Width="160" ItemsSource="{Binding SpeedUnits}"
+                            SelectedIndex="{Binding SelectedSpeedUnitIndex, Mode=TwoWay}"/>
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+              BoxShadow="{DynamicResource ShadowSoft}">
+        <StackPanel>
+          <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushDangerBright}">
+                <PathIcon Data="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"
+                          Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+              </Border>
+              <TextBlock Text="{DynamicResource Set.Data}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Grid ColumnDefinitions="*,24,*" Margin="20,16">
+            <StackPanel Grid.Column="0" Spacing="0" VerticalAlignment="Top">
+              <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="{DynamicResource Set.Retention}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.RetentionDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="110" VerticalAlignment="Center"
+                          ItemsSource="{Binding RetentionOptions}"
+                          SelectedIndex="{Binding SelectedRetentionIndex, Mode=TwoWay}"/>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,0,0,8"
+                    IsVisible="{Binding IsForeverRetentionSelected}">
+                <PathIcon Grid.Column="0" Width="11" Height="11" VerticalAlignment="Top" Margin="0,1,0,0"
+                          Data="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"
+                          Foreground="{DynamicResource BrushWarning}"/>
+                <TextBlock Grid.Column="1" Text="{Binding ForeverRetentionWarning}" FontSize="10" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrushWarning}"/>
+              </Grid>
+              <Border Height="1" Background="{DynamicResource BrushDivider}" Margin="0,0,0,8"/>
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                  <TextBlock Text="{DynamicResource Set.ExportAll}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.ExportAllDesc}" Foreground="{DynamicResource BrushTextMuted}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" MinWidth="110" VerticalAlignment="Center" HorizontalContentAlignment="Center"
+                        Command="{Binding ExportAllCommand}"
+                        Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}" Padding="16,6" CornerRadius="6"
+                        BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                  <TextBlock Text="{DynamicResource Set.ExportAllButton}"/>
+                </Button>
+              </Grid>
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="6" Margin="0,8,0,0"
+                    IsVisible="{Binding ExportStatus.IsVisible}">
+                <Panel Grid.Column="0" VerticalAlignment="Center">
+                  <PathIcon Width="11" Height="11"
+                            Data="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"
+                            Foreground="{DynamicResource BrushDownload}"
+                            IsVisible="{Binding ExportStatus.IsSuccess}"/>
+                  <PathIcon Width="11" Height="11"
+                            Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                            Foreground="{DynamicResource BrushDangerBright}"
+                            IsVisible="{Binding ExportStatus.IsError}"/>
+                </Panel>
+                <TextBlock Grid.Column="1" Text="{Binding ExportStatus.Message}" FontSize="10" VerticalAlignment="Center"
+                           Foreground="{DynamicResource BrushTextSecondaryAlt}"/>
+                <TextBlock Grid.Column="2" Text="{Binding ExportStatus.FileName}" FontSize="10" VerticalAlignment="Center"
+                           TextTrimming="PrefixCharacterEllipsis"
+                           Foreground="{DynamicResource BrushTextSecondaryAlt}"
+                           ToolTip.Tip="{Binding ExportStatus.FilePath}"/>
+                <Button Grid.Column="3" Classes="linkBtn" VerticalAlignment="Center"
+                        Command="{Binding ExportStatus.RevealCommand}"
+                        IsVisible="{Binding ExportStatus.CanReveal}">
+                  <TextBlock Text="{DynamicResource Common.OpenFolder}" FontSize="10" Foreground="{DynamicResource BrushLink}" TextDecorations="Underline"/>
+                </Button>
+              </Grid>
+            </StackPanel>
+            <Border Grid.Column="2" VerticalAlignment="Top" CornerRadius="8" BorderBrush="{DynamicResource BrushDangerBorderSoft}" BorderThickness="1" Background="{DynamicResource BrushDangerBgSoft}" Padding="16">
+              <StackPanel Spacing="12">
+                <StackPanel>
+                  <TextBlock Text="{DynamicResource Set.DeleteAll}" Foreground="{DynamicResource BrushTextBody}" FontSize="12"/>
+                  <TextBlock Text="{DynamicResource Set.DeleteAllDesc}" Foreground="{DynamicResource BrushDangerBright}" FontSize="10" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button Command="{Binding ResetDataCommand}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Background="{DynamicResource BrushDangerBright}" Foreground="{DynamicResource BrushWhite}" Padding="16,8" CornerRadius="6">
+                  <TextBlock Text="{DynamicResource Set.DeleteAllButton}" FontWeight="SemiBold" FontSize="11"/>
+                </Button>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border CornerRadius="10" Background="{DynamicResource BrushSurfacePanel}" ClipToBounds="True"
+              BoxShadow="{DynamicResource ShadowSoft}">
+        <StackPanel>
+          <Border Padding="16,12" Background="{DynamicResource BrushHeaderRow}" BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="0,0,0,0.4">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border CornerRadius="6" Padding="4" Width="24" Height="24" Background="{DynamicResource BrushAccentPurple}">
+                <PathIcon Data="M21,10.12H14.22L16.96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21,14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L21,3V10.12M12.5,8V12.25L16,14.33L15.28,15.54L11,13V8H12.5Z"
+                          Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+              </Border>
+              <TextBlock Text="{DynamicResource Set.AboutUpdates}" Foreground="{DynamicResource BrushTextHeader}" FontWeight="SemiBold" FontSize="12"
+                         VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+          <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="32" Margin="20,12">
+            <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+              <TextBlock Foreground="{DynamicResource BrushTextBody}" FontSize="12" FontWeight="SemiBold">
+                <Run Text="OpenNetMeter "/><Run Text="{Binding VersionText}"/>
+              </TextBlock>
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Classes="linkBtn" Command="{Binding OpenRepositoryCommand}">
+                  <TextBlock Text="GitHub" FontSize="10" Foreground="{DynamicResource BrushLink}" TextDecorations="Underline"/>
+                </Button>
+                <Button Classes="linkBtn" Command="{Binding OpenPrivacyPolicyCommand}">
+                  <TextBlock Text="{DynamicResource Set.Privacy}" FontSize="10" Foreground="{DynamicResource BrushLink}" TextDecorations="Underline"/>
+                </Button>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+              <TextBlock Text="{Binding UpdateStatusMessage}" Foreground="{DynamicResource BrushTextSecondaryAlt}" FontSize="11"
+                         HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap"
+                         IsVisible="{Binding UpdateStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              <ProgressBar IsVisible="{Binding IsCheckingForUpdates}" IsIndeterminate="True" Height="3"/>
+            </StackPanel>
+            <Grid Grid.Column="1" VerticalAlignment="Center">
+              <Button Command="{Binding CheckForUpdatesCommand}"
+                      IsVisible="{Binding !IsUpdateAvailable}"
+                      HorizontalAlignment="Left" HorizontalContentAlignment="Center"
+                      Background="{DynamicResource BrushHeaderRow}" Foreground="{DynamicResource BrushTextUi}" Padding="16,8" CornerRadius="6"
+                      BorderBrush="{DynamicResource BrushBorderEmphasis}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                            Foreground="{DynamicResource BrushTextSecondaryAlt}" Width="14" Height="14"/>
+                  <TextBlock Text="{DynamicResource Set.CheckUpdate}"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding DownloadUpdateCommand}"
+                      IsVisible="{Binding IsUpdateAvailable}"
+                      HorizontalAlignment="Left" HorizontalContentAlignment="Center"
+                      Background="{DynamicResource BrushDownload}" Foreground="{DynamicResource BrushWhite}" Padding="16,8" CornerRadius="6">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <PathIcon Data="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"
+                            Foreground="{DynamicResource BrushWhite}" Width="14" Height="14"/>
+                  <TextBlock Text="{DynamicResource Set.DownloadUpdate}" FontWeight="SemiBold"/>
+                </StackPanel>
+              </Button>
+            </Grid>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
